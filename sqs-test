@@ -6,15 +6,14 @@ use SQS::Simple;
 use Time::HiRes qw(time);
 
 my %opts;
+GetOptions(\%opts, 'reset', 'help');
+
 my $scr             = basename($0);
 my $max_messages    = shift || 10;
 my $base_time       = time();
 
 my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
 my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
-
-
-GetOptions(\%opts, 'reset', 'help');
 
 usage(0) if ($opts{help});
 usage(1) if @ARGV || $max_messages =~ /\D/;
