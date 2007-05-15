@@ -1,46 +1,66 @@
 #!/usr/bin/perl -w
 
 use Data::Dumper;
-use SQS::Simple qw(timestamp);
+use SQS::Simple;
+use Time::HiRes qw(time);
 
 use strict;
 
+my $max_messages    = shift || 10;
+my $base_time       = time();
+
 my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
 my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
-my $timeout         = 60;
-my $resp;
-
-my $ExpiryTime      = timestamp(time + 60*15);
 
 my $sqs = new SQS::Simple( 
     AWSAccessKeyId  => $AWSAccessKeyId, 
     SecretKey       => $SecretKey,
 );
-# my $q1 = $sqs->CreateQueue( QueueName => 'testqueue2', DefaultVisibilityTimeout => $timeout );
 
-# List queues
-my @queues;
-$resp = $sqs->ListQueues();
-@queues = @{$resp->{QueueUrl}};
-print "Your queues:\n" . join("\n", @queues) . "\n";
+my $q = ($sqs->ListQueues())[0];
 
-my $q1 = new SQS::Simple::Queue( 
-    AWSAccessKeyId  => $AWSAccessKeyId, 
-    SecretKey       => $SecretKey,
-    Endpoint        => $queues[0],
-);
+die "No queues found!" unless $q;
 
-# for (1..3) {
-#     $q1->SendMessage( MessageBody => time );
-# }
+print "Using Queue: $q\n";
 
-my $body;
+my $pid = fork();
 
-$resp = $q1->ReceiveMessage();
-$body = $resp->{Message}{MessageBody};
+die "Tried to fork, it didn't work: $!" unless defined($pid);
 
-while ($body) {
-    print "Retrieved: " . scalar(localtime($body)) . "\n" if $body;
-    my $resp = $q1->ReceiveMessage();
-    $body = $resp->{Message}{MessageBody};
-};
+if ($pid) {
+    # I'm the daddy!
+    # PRODUCER
+    for my $id (1..$max_messages) {
+        printlog("Sending $id");
+        
+        # pad message to 8K
+        my $msg = sprintf("%02i:%0800i", $id, 0);
+        $q->SendMessage($msg);
+    }
+    wait();
+}
+else {
+    # child process
+    # CONSUMER
+    my $count = 0;
+    while ($count < $max_messages) {
+        my $start = time;
+        my $msg = $q->ReceiveMessage({VisibilityTimeout => 30});
+        my $t_receive = time - $start;
+        if (defined $msg) { 
+            $count++;
+            (my $id = substr($msg->{MessageBody}, 0, 2)) =~ s/^0+//;
+            printlog(sprintf("Received message %s [%i/%i] in %0.3fs", $id, $count, $max_messages, $t_receive));
+            $q->DeleteMessage($msg->{MessageId});            
+        }
+        else {
+            printlog('Nothing to receive');
+        }
+    }
+}
+exit(0);
+
+sub printlog {
+    my $msg = shift;
+    printf("[%i] %0.3f %s\n", $$, scalar(time - $base_time), $msg);
+}

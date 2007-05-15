@@ -9,60 +9,110 @@ use XML::Simple;
 
 use base qw(Exporter);
 
-use constant SQS_VERSION => '2006-04-01';
-use constant ENDPOINT    => 'http://queue.amazonaws.com';
+use constant SQS_VERSION   => '2006-04-01';
+use constant BASE_ENDPOINT => 'http://queue.amazonaws.com';
+use overload '""'          => \&to_string;
 
 our @EXPORT_OK = qw( timestamp );
 
 sub new {
     my $class = shift;
     my $self = {
-        Endpoint => +ENDPOINT,
+        Endpoint => +BASE_ENDPOINT,
         SignatureVersion => 1,
         @_,
     };
     return bless($self, $class);
 }
 
+sub to_string {
+    my $self = shift;
+    return ref($self) . ' (' . $self->Endpoint . ')';
+}
+
+sub CreateQueue {
+    my ($self, $queue_name, $params) = @_;
+    
+    $params->{Action}    = 'CreateQueue';
+    $params->{QueueName} = $queue_name;
+        
+    my $href = $self->dispatch($params);
+    
+    if ($href->{QueueUrl}) {
+        return SQS::Simple::Queue->new(
+            %$self,
+            Endpoint => $href->{QueueUrl},
+        );
+    }
+    else {
+        die "Failed to create a queue: " . $response->status_line;
+    }
+}
+
+sub ListQueues {
+    my ($self, $queue_name, $params) = @_;
+    
+    $params->{Action} = 'ListQueues';
+        
+    my $href = $self->dispatch($params);
+    
+    my @result;
+    
+    if (UNIVERSAL::isa($href->{QueueUrl}, 'ARRAY')) {
+        @result = @{$href->{QueueUrl}};
+    }
+    else {
+        @result = ( $href->{QueueUrl} );
+    }
+    return map {
+        new SQS::Simple::Queue(
+            %$self,
+            Endpoint => $_,
+        )        
+    } @result;
+}
+
+# Autoload accessors for object member variables
 sub AUTOLOAD {
-    my ($self, %params) = @_;
+    my ($self, $value) = @_;
     
-    # action is the method name minus its package qualifier
-    (my $action = $AUTOLOAD) =~ s/^.*://;
+    (my $method = $AUTOLOAD) =~ s/.*://;
     
-    %params = (
-        Action              => $action,
+    return unless defined $self->{$method};
+    
+    if (defined $value) {
+        $self->{$method} = $value;
+        return $self;
+    }
+    else {
+        return $self->{$method};
+    }
+}
+
+sub DESTROY {}
+
+sub dispatch {
+    my $self = shift;
+    my $params = shift || {};
+    
+    $params = {
         AWSAccessKeyId      => $self->{AWSAccessKeyId},
         Version             => +SQS_VERSION,
-        %params
-    );
-    if (!$params{Timestamp} && !$params{Expires}) {
-        $params{Timestamp} = timestamp();
+        %$params
+    };
+
+    if (!$params->{Timestamp} && !$params->{Expires}) {
+        $params->{Timestamp} = timestamp();
     }
 
-    my $url      = $self->_get_signed_url(\%params);
+    my $url      = $self->_get_signed_url($params);
     
     my $ua       = LWP::UserAgent->new();
     my $response = $ua->get($url);
     
     if ($response->is_success) {
         my $href = XMLin($response->content);
-    
-        if ($action eq 'CreateQueue') {
-            if ($href->{QueueUrl}) {
-                return SQS::Simple::Queue->new(
-                    AWSAccessKeyId  => $self->{AWSAccessKeyId}, 
-                    SecretKey       => $self->{SecretKey},
-                    Endpoint        => $href->{QueueUrl},
-                );
-            }
-            else {
-                die "Failed to create a queue: " . $response->status_line;
-            }
-        }
-        else {
-            return $href;
-        }
+        return $href;
     }
     else {
         my $msg;
@@ -70,14 +120,11 @@ sub AUTOLOAD {
             my $href = XMLin($response->content);
             $msg = $href->{Errors}{Error}{Message};
         };
-        my $error = "On calling $AUTOLOAD\nURL: $url\nERROR: " . $response->status_line . "\n";
+        my $error = "On calling $params->{Action}\nURL: $url\nERROR: " . $response->status_line . "\n";
         $error .= "MSG: $msg\n" if $msg;
         die $error;
     }
 }
-
-# Define DESTROY explicitly so it doesn't get autoloaded
-sub DESTROY {}
 
 sub timestamp {
     my $t    = shift || time;
@@ -113,7 +160,7 @@ sub _get_signed_url {
     
     # Need to escape + characters in signature
     # see http://docs.amazonwebservices.com/AWSSimpleQueueService/2006-04-01/Query_QueryAuth.html
-    $params->{Signature} = uri_escape(encode_base64($hmac->digest, ''), '+');
+    $params->{Signature}   = uri_escape(encode_base64($hmac->digest, ''), '+');
     $params->{MessageBody} = uri_escape($params->{MessageBody}) if $params->{MessageBody};
     
     my $url = $self->{Endpoint} . '/?' . join('&', map { $_ . '=' . $params->{$_} } keys %$params);
