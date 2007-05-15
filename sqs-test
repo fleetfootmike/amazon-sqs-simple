@@ -1,0 +1,46 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Data::Dumper;
+
+use SQS::Simple qw( timestamp );
+
+my $AWSAccessKeyId  = '0NK019CD48HNEDK3PBG2';
+my $SecretKey       = 'N/RHWyrt+tiHawEXCMHTELBqEckwtiRTNc57w9Mf';
+my $timeout         = 6000;
+my $resp;
+
+my $ExpiryTime      = timestamp(time + 60*15);
+
+my $sqs = new SQS::Simple( 
+    AWSAccessKeyId  => $AWSAccessKeyId, 
+    SecretKey       => $SecretKey,
+);
+# my $q1 = $sqs->CreateQueue( QueueName => 'queue2', DefaultVisibilityTimeout => $timeout );
+
+# List queues
+my @queues;
+$resp = $sqs->ListQueues();
+@queues = @{$resp->{QueueUrl}};
+print "Your queues:\n" . join("\n", @queues) . "\n";
+
+my $q1 = new SQS::Simple::Queue( 
+    AWSAccessKeyId  => $AWSAccessKeyId, 
+    SecretKey       => $SecretKey,
+    Endpoint        => $queues[0],
+);
+
+# for (1..3) {
+#     $q1->SendMessage( MessageBody => rand() );
+# }
+
+my $body;
+
+$resp = $q1->ReceiveMessage();
+$body = $resp->{Message}{MessageBody};
+
+while ($body) {
+    print "Retrieved: $body\n" if $body;
+    my $resp = $q1->ReceiveMessage();
+    $body = $resp->{Message}{MessageBody};
+};
