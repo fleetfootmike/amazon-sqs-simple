@@ -1,16 +1,31 @@
 #!/usr/bin/perl -w
 
-use Data::Dumper;
+use File::Basename;
+use Getopt::Long;
 use SQS::Simple;
 use Time::HiRes qw(time);
 
-use strict;
-
+my %opts;
+my $scr             = basename($0);
 my $max_messages    = shift || 10;
 my $base_time       = time();
 
 my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
 my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
+
+
+GetOptions(\%opts, 'reset', 'help');
+
+usage(0) if ($opts{help});
+usage(1) if @ARGV || $max_messages =~ /\D/;
+    
+sub usage {
+    my $status = shift || 0;
+    print "Usage: $scr [--reset] [--help]\n";
+    exit($status);
+}
+
+use strict;
 
 my $sqs = new SQS::Simple( 
     AWSAccessKeyId  => $AWSAccessKeyId, 
@@ -23,42 +38,60 @@ die "No queues found!" unless $q;
 
 print "Using Queue: $q\n";
 
-my $pid = fork();
-
-die "Tried to fork, it didn't work: $!" unless defined($pid);
-
-if ($pid) {
-    # I'm the daddy!
-    # PRODUCER
-    for my $id (1..$max_messages) {
-        printlog("Sending $id");
-        
-        # pad message to 8K
-        my $msg = sprintf("%02i:%0800i", $id, 0);
-        $q->SendMessage($msg);
+if ($opts{reset}) {
+    printlog("Resetting the queue");
+    while(defined(my $msg = $q->ReceiveMessage({VisibilityTimeout => 5}))) {
+        (my $id = substr($msg->{MessageBody}, 0, 2)) =~ s/^0+//;
+        printlog("Deleting message $id");
+        $q->DeleteMessage($msg->{MessageId});
     }
-    wait();
 }
 else {
-    # child process
-    # CONSUMER
-    my $count = 0;
-    while ($count < $max_messages) {
-        my $start = time;
-        my $msg = $q->ReceiveMessage({VisibilityTimeout => 30});
-        my $t_receive = time - $start;
-        if (defined $msg) { 
-            $count++;
-            (my $id = substr($msg->{MessageBody}, 0, 2)) =~ s/^0+//;
-            printlog(sprintf("Received message %s [%i/%i] in %0.3fs", $id, $count, $max_messages, $t_receive));
-            $q->DeleteMessage($msg->{MessageId});            
+    my $pid = fork();
+
+    die "Tried to fork, it didn't work: $!" unless defined($pid);
+
+    if ($pid) {
+        # I'm the daddy!
+        # PRODUCER
+        for my $id (1..$max_messages) {
+            printlog("Sending $id");
+        
+            # pad message to c. 8K
+            my $msg = sprintf("%i:%07500i", $id, 0);
+            $q->SendMessage($msg);
         }
-        else {
-            printlog('Nothing to receive');
+        wait();
+    }
+    else {
+        # child process
+        # CONSUMER
+        my $count = 0;
+        my $requests = 0;
+    
+        REQUEST: while ($count < $max_messages) {
+            $requests++;
+            my $start = time;
+            my $msg = $q->ReceiveMessage({VisibilityTimeout => 5});
+            my $t_receive = time - $start;
+            if (defined $msg) { 
+                $count++;
+                my ($id) = $msg->{MessageBody} =~ /^([0-9]+)/;
+                printlog(sprintf("Received message %s [%i/%i] in %0.3fs", $id, $count, $max_messages, $t_receive));
+                $q->DeleteMessage($msg->{MessageId});            
+            }
+            else {
+                printlog('Nothing to receive');
+            }
+        
+            if ($requests >= $max_messages * 10) {
+                printlog("$requests requests sent, quitting consumer loop");
+                last REQUEST;
+            }
         }
     }
+    exit(0);
 }
-exit(0);
 
 sub printlog {
     my $msg = shift;
