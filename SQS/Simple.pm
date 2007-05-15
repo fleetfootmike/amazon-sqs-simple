@@ -5,12 +5,13 @@ use Exporter;
 use LWP::UserAgent;
 use MIME::Base64;
 use SQS::Simple::Queue;
+use URI::Escape;
 use XML::Simple;
 
 use constant SQS_VERSION => '2006-04-01';
 use constant ENDPOINT    => 'http://queue.amazonaws.com';
 
-our EXPORT_OK = qw( timestamp );
+@EXPORT_OK = qw( timestamp );
 
 sub new {
     my $class = shift;
@@ -64,7 +65,14 @@ sub AUTOLOAD {
         }
     }
     else {
-        die "On calling $AUTOLOAD\n$url\nERROR: " . $response->status_line;
+        my $msg;
+        eval {
+            my $href = XMLin($response->content);
+            $msg = $href->{Errors}{Error}{Message};
+        };
+        my $error = "On calling $AUTOLOAD\nURL: $url\nERROR: " . $response->status_line . "\n";
+        $error .= "MSG: $msg\n" if $msg;
+        die $error;
     }
 }
 
@@ -102,9 +110,14 @@ sub _get_signed_url {
     }
 
     my $hmac = Digest::HMAC_SHA1->new($self->{SecretKey})->add($sig);
-     
-    $params->{Signature} = encode_base64($hmac->digest);
+    
+    # Need to escape + characters in signature
+    # see http://docs.amazonwebservices.com/AWSSimpleQueueService/2006-04-01/Query_QueryAuth.html
+    $params->{Signature} = uri_escape(encode_base64($hmac->digest), '+');
+    $params->{MessageBody} = uri_escape($params->{MessageBody}) if $params->{MessageBody};
+    
     my $url = $self->{Endpoint} . '/?' . join('&', map { $_ . '=' . $params->{$_} } keys %$params);
+    
     return $url;
 }
 

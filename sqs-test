@@ -1,22 +1,20 @@
 #!/usr/bin/perl -w
 
-use strict;
 use Data::Dumper;
+use SQS::Simple;
 
-use SQS::Simple qw( timestamp );
+use strict;
 
-my $AWSAccessKeyId  = '0NK019CD48HNEDK3PBG2';
-my $SecretKey       = 'N/RHWyrt+tiHawEXCMHTELBqEckwtiRTNc57w9Mf';
+my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
+my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
 my $timeout         = 6000;
 my $resp;
-
-my $ExpiryTime      = timestamp(time + 60*15);
 
 my $sqs = new SQS::Simple( 
     AWSAccessKeyId  => $AWSAccessKeyId, 
     SecretKey       => $SecretKey,
 );
-# my $q1 = $sqs->CreateQueue( QueueName => 'queue2', DefaultVisibilityTimeout => $timeout );
+# my $q1 = $sqs->CreateQueue( QueueName => 'testqueue2', DefaultVisibilityTimeout => $timeout );
 
 # List queues
 my @queues;
@@ -31,7 +29,7 @@ my $q1 = new SQS::Simple::Queue(
 );
 
 # for (1..3) {
-#     $q1->SendMessage( MessageBody => rand() );
+#     $q1->SendMessage( MessageBody => time );
 # }
 
 my $body;
@@ -40,7 +38,7 @@ $resp = $q1->ReceiveMessage();
 $body = $resp->{Message}{MessageBody};
 
 while ($body) {
-    print "Retrieved: $body\n" if $body;
+    print "Retrieved: " . scalar(localtime($body)) . "\n" if $body;
     my $resp = $q1->ReceiveMessage();
     $body = $resp->{Message}{MessageBody};
 };
