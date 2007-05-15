@@ -1,17 +1,18 @@
 package SQS::Simple;
 
 use Digest::HMAC_SHA1;
-use Exporter;
 use LWP::UserAgent;
 use MIME::Base64;
 use SQS::Simple::Queue;
 use URI::Escape;
 use XML::Simple;
 
+use base qw(Exporter);
+
 use constant SQS_VERSION => '2006-04-01';
 use constant ENDPOINT    => 'http://queue.amazonaws.com';
 
-@EXPORT_OK = qw( timestamp );
+our @EXPORT_OK = qw( timestamp );
 
 sub new {
     my $class = shift;

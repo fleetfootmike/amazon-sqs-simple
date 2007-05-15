@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use Data::Dumper;
-use SQS::Simple;
+use SQS::Simple qw(timestamp);
 
 use strict;
 
@@ -9,6 +9,8 @@ my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
 my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
 my $timeout         = 6000;
 my $resp;
+
+my $ExpiryTime      = timestamp(time + 60*15);
 
 my $sqs = new SQS::Simple( 
     AWSAccessKeyId  => $AWSAccessKeyId, 
