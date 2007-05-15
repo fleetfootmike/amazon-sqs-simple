@@ -89,6 +89,7 @@ sub AUTOLOAD {
     }
 }
 
+# Explicitly define DESTROY so that it doesn't get autoloaded
 sub DESTROY {}
 
 sub dispatch {
@@ -106,7 +107,6 @@ sub dispatch {
     }
 
     my $url      = $self->_get_signed_url($params);
-    
     my $ua       = LWP::UserAgent->new();
     my $response = $ua->get($url);
     
@@ -120,8 +120,9 @@ sub dispatch {
             my $href = XMLin($response->content);
             $msg = $href->{Errors}{Error}{Message};
         };
-        my $error = "On calling $params->{Action}\nURL: $url\nERROR: " . $response->status_line . "\n";
-        $error .= "MSG: $msg\n" if $msg;
+        my $error = "ERROR: On calling $params->{Action}: " . $response->status_line;
+        $error .= " ($msg)" if $msg;
+        $error .= "\n";
         die $error;
     }
 }
@@ -160,7 +161,7 @@ sub _get_signed_url {
     
     # Need to escape + characters in signature
     # see http://docs.amazonwebservices.com/AWSSimpleQueueService/2006-04-01/Query_QueryAuth.html
-    $params->{Signature}   = uri_escape(encode_base64($hmac->digest, ''), '+');
+    $params->{Signature}   = uri_escape(encode_base64($hmac->digest, ''));
     $params->{MessageBody} = uri_escape($params->{MessageBody}) if $params->{MessageBody};
     
     my $url = $self->{Endpoint} . '/?' . join('&', map { $_ . '=' . $params->{$_} } keys %$params);

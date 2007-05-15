@@ -39,7 +39,7 @@ print "Using Queue: $q\n";
 
 if ($opts{reset}) {
     printlog("Resetting the queue");
-    while(defined(my $msg = $q->ReceiveMessage({VisibilityTimeout => 5}))) {
+    while(defined(my $msg = $q->ReceiveMessage())) {
         (my $id = substr($msg->{MessageBody}, 0, 2)) =~ s/^0+//;
         printlog("Deleting message $id");
         $q->DeleteMessage($msg->{MessageId});
