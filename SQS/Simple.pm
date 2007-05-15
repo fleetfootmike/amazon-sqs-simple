@@ -41,7 +41,6 @@ sub AUTOLOAD {
     }
 
     my $url      = $self->_get_signed_url(\%params);
-    $url         =~ s/\s//g;
     
     my $ua       = LWP::UserAgent->new();
     my $response = $ua->get($url);
@@ -114,7 +113,7 @@ sub _get_signed_url {
     
     # Need to escape + characters in signature
     # see http://docs.amazonwebservices.com/AWSSimpleQueueService/2006-04-01/Query_QueryAuth.html
-    $params->{Signature} = uri_escape(encode_base64($hmac->digest), '+');
+    $params->{Signature} = uri_escape(encode_base64($hmac->digest, ''), '+');
     $params->{MessageBody} = uri_escape($params->{MessageBody}) if $params->{MessageBody};
     
     my $url = $self->{Endpoint} . '/?' . join('&', map { $_ . '=' . $params->{$_} } keys %$params);
