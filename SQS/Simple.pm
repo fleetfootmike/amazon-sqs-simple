@@ -9,7 +9,7 @@ use XML::Simple;
 
 use base qw(Exporter);
 
-use constant SQS_VERSION   => '2006-04-01';
+use constant SQS_VERSION   => '2007-05-01';
 use constant BASE_ENDPOINT => 'http://queue.amazonaws.com';
 use overload '""'          => \&to_string;
 
@@ -54,22 +54,20 @@ sub ListQueues {
     
     $params->{Action} = 'ListQueues';
         
-    my $href = $self->dispatch($params);
+    my $href = $self->dispatch($params, ['QueueUrl']);
     
-    my @result;
-    
-    if (UNIVERSAL::isa($href->{QueueUrl}, 'ARRAY')) {
-        @result = @{$href->{QueueUrl}};
+    if ($href->{QueueUrl}) {
+        my @result = map {
+            new SQS::Simple::Queue(
+                %$self,
+                Endpoint => $_,
+            )        
+        } @{$href->{QueueUrl}};
+        return \@result;
     }
     else {
-        @result = ( $href->{QueueUrl} );
+        return undef;
     }
-    return map {
-        new SQS::Simple::Queue(
-            %$self,
-            Endpoint => $_,
-        )        
-    } @result;
 }
 
 # Autoload accessors for object member variables
@@ -93,8 +91,9 @@ sub AUTOLOAD {
 sub DESTROY {}
 
 sub dispatch {
-    my $self = shift;
-    my $params = shift || {};
+    my $self        = shift;
+    my $params      = shift || {};
+    my $force_array = shift || [];
     
     $params = {
         AWSAccessKeyId      => $self->{AWSAccessKeyId},
@@ -111,7 +110,7 @@ sub dispatch {
     my $response = $ua->get($url);
     
     if ($response->is_success) {
-        my $href = XMLin($response->content);
+        my $href = XMLin($response->content, ForceArray => $force_array);
         return $href;
     }
     else {

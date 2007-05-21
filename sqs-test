@@ -6,7 +6,7 @@ use SQS::Simple;
 use Time::HiRes qw(time);
 
 my %opts;
-GetOptions(\%opts, 'reset', 'help');
+GetOptions(\%opts, 'reset', 'help', 'delete-queues');
 
 my $scr             = basename($0);
 my $max_messages    = shift || 10;
@@ -20,7 +20,7 @@ usage(1) if @ARGV || $max_messages =~ /\D/;
     
 sub usage {
     my $status = shift || 0;
-    print "Usage: $scr [--reset] [--help]\n";
+    print "Usage: $scr [--reset [--delete-queues]] [--help]\n";
     exit($status);
 }
 
@@ -31,9 +31,22 @@ my $sqs = new SQS::Simple(
     SecretKey       => $SecretKey,
 );
 
-my $q = ($sqs->ListQueues())[0];
+# $sqs->CreateQueue('test1');
 
-die "No queues found!" unless $q;
+my $queues = $sqs->ListQueues();
+die "No queues found!" unless defined $queues;
+
+my $q = $queues->[0];
+
+$q->SetAttribute('VisibilityTimeout', 10);
+
+print '=' x 80 . "\n";
+print "Attributes for $q:\n";
+my $attrs = $q->GetAttributes();
+for (keys %$attrs) {
+    print "$_ => $attrs->{$_}\n";
+}
+print '=' x 80 . "\n";
 
 print "Using Queue: $q\n";
 
@@ -44,6 +57,7 @@ if ($opts{reset}) {
         printlog("Deleting message $id");
         $q->DeleteMessage($msg->{MessageId});
     }
+    $q->DeleteQueue() if $opts{'delete-queues'};
 }
 else {
     my $pid = fork();

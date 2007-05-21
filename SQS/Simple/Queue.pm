@@ -52,16 +52,31 @@ sub PeekMessage {
     return $href->{Message};
 }
 
-# sub AUTOLOAD {
-#     my $self = shift;
-#     my $params = shift || {};
-# 
-#     (my $action = $AUTOLOAD) =~ s/.*://;
-#     $params->{Action} = $action;
-#         
-#     return $self->dispatch($params);
-# }
-# 
-# sub DESTROY {}
+sub GetAttributes {
+    my ($self, $params) = @_;
+    
+    $params->{Action} = 'GetQueueAttributes';
+    $params->{Attribute} ||= 'All';
+    
+    my $href = $self->dispatch($params, [ 'AttributedValue' ]);
+        
+    my %result;
+    if ($href->{'AttributedValue'}) {
+        foreach my $attr (@{$href->{'AttributedValue'}}) {
+            $result{$attr->{Attribute}} = $attr->{Value};
+        }
+    }
+    return \%result;
+}
+
+sub SetAttribute {
+    my ($self, $key, $value, $params) = @_;
+    
+    $params->{Action}    = 'SetQueueAttributes';
+    $params->{Attribute} = $key;
+    $params->{Value}     = $value;
+    
+    my $href = $self->dispatch($params);
+}
 
 1;
