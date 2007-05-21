@@ -1,6 +1,6 @@
-package SQS::Simple::Queue;
+package Amazon::SQS::Simple::Queue;
 
-use base 'SQS::Simple';
+use base 'Amazon::SQS::Simple';
 
 sub DeleteQueue {
     my $self = shift;

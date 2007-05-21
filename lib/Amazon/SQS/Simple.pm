@@ -1,9 +1,9 @@
-package SQS::Simple;
+package Amazon::SQS::Simple;
 
 use Digest::HMAC_SHA1;
 use LWP::UserAgent;
 use MIME::Base64;
-use SQS::Simple::Queue;
+use Amazon::SQS::Simple::Queue;
 use URI::Escape;
 use XML::Simple;
 

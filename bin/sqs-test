@@ -2,7 +2,7 @@
 
 use File::Basename;
 use Getopt::Long;
-use SQS::Simple;
+use Amazon::SQS::Simple;
 use Time::HiRes qw(time);
 
 my %opts;
