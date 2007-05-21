@@ -26,7 +26,7 @@ sub usage {
 
 use strict;
 
-my $sqs = new SQS::Simple( 
+my $sqs = new Amazon::SQS::Simple( 
     AWSAccessKeyId  => $AWSAccessKeyId, 
     SecretKey       => $SecretKey,
 );
@@ -71,7 +71,7 @@ else {
             printlog("Sending $id");
         
             # pad message to c. 8K
-            my $msg = sprintf("%i:%07500i", $id, 0);
+            my $msg = sprintf("%i:%080000i", $id, 0);
             $q->SendMessage($msg);
         }
         wait();

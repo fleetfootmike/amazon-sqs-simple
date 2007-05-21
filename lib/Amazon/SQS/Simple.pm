@@ -9,10 +9,15 @@ use XML::Simple;
 
 use base qw(Exporter);
 
-use constant SQS_VERSION   => '2007-05-01';
-use constant BASE_ENDPOINT => 'http://queue.amazonaws.com';
-use overload '""'          => \&to_string;
+use constant SQS_VERSION      => '2007-05-01';
+use constant BASE_ENDPOINT    => 'http://queue.amazonaws.com';
+use constant MAX_GET_MSG_SIZE => 4096; # Messages larger than this size will be sent
+                                       # using a POST request. This feature requires
+                                       # SQS_VERSION 2007-05-01 or later.
+                                       
+use overload '""' => \&to_string;
 
+our $VERSION   = '0.1';
 our @EXPORT_OK = qw( timestamp );
 
 sub new {
@@ -27,7 +32,7 @@ sub new {
 
 sub to_string {
     my $self = shift;
-    return ref($self) . ' (' . $self->Endpoint . ')';
+    return $self->Endpoint();
 }
 
 sub CreateQueue {
@@ -39,7 +44,7 @@ sub CreateQueue {
     my $href = $self->dispatch($params);
     
     if ($href->{QueueUrl}) {
-        return SQS::Simple::Queue->new(
+        return Amazon::SQS::Simple::Queue->new(
             %$self,
             Endpoint => $href->{QueueUrl},
         );
@@ -58,7 +63,7 @@ sub ListQueues {
     
     if ($href->{QueueUrl}) {
         my @result = map {
-            new SQS::Simple::Queue(
+            new Amazon::SQS::Simple::Queue(
                 %$self,
                 Endpoint => $_,
             )        
@@ -91,9 +96,11 @@ sub AUTOLOAD {
 sub DESTROY {}
 
 sub dispatch {
-    my $self        = shift;
-    my $params      = shift || {};
-    my $force_array = shift || [];
+    my $self         = shift;
+    my $params       = shift || {};
+    my $force_array  = shift || [];
+    my $post_request = 0;
+    my $msg; # only used for POST requests
     
     $params = {
         AWSAccessKeyId      => $self->{AWSAccessKeyId},
@@ -104,10 +111,27 @@ sub dispatch {
     if (!$params->{Timestamp} && !$params->{Expires}) {
         $params->{Timestamp} = timestamp();
     }
+    
+    if ($params->{MessageBody} && length($params->{MessageBody}) > +MAX_GET_MSG_SIZE) {
+        $msg = $params->{MessageBody};
+        delete($params->{MessageBody});
+        $post_request = 1;
+    }
 
     my $url      = $self->_get_signed_url($params);
     my $ua       = LWP::UserAgent->new();
-    my $response = $ua->get($url);
+    my $response;
+    
+    if ($post_request) {
+        $response = $ua->post(
+            $url, 
+            'Content-type' => 'text/plain', 
+            'Content'      => $msg
+        );
+    }
+    else {
+        $response = $ua->get($url);
+    }
     
     if ($response->is_success) {
         my $href = XMLin($response->content, ForceArray => $force_array);
