@@ -31,11 +31,10 @@ my $sqs = new Amazon::SQS::Simple(
     SecretKey       => $SecretKey,
 );
 
-# $sqs->CreateQueue('test1');
-
 my $queues = $sqs->ListQueues();
 die "No queues found!" unless defined $queues;
 
+# my $q = $sqs->GetQueue('http://queue.amazonaws.com/A3R31KU3CI9X52/test1');
 my $q = $queues->[0];
 
 $q->SetAttribute('VisibilityTimeout', 10);
@@ -57,7 +56,7 @@ if ($opts{reset}) {
         printlog("Deleting message $id");
         $q->DeleteMessage($msg->{MessageId});
     }
-    $q->DeleteQueue() if $opts{'delete-queues'};
+    $q->Delete() if $opts{'delete-queues'};
 }
 else {
     my $pid = fork();
@@ -77,6 +76,7 @@ else {
         wait();
     }
     else {
+        exit();
         # child process
         # CONSUMER
         my $count = 0;

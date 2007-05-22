@@ -32,7 +32,16 @@ sub new {
 
 sub to_string {
     my $self = shift;
-    return $self->Endpoint();
+    (my $name = $self->Endpoint()) =~ s|.*/||;
+    return $name;
+}
+
+sub GetQueue {
+    my ($self, $queue_endpoint) = @_;
+    return new Amazon::SQS::Simple::Queue(
+        %$self,
+        Endpoint => $queue_endpoint,
+    );
 }
 
 sub CreateQueue {

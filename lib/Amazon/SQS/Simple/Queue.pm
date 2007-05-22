@@ -2,7 +2,7 @@ package Amazon::SQS::Simple::Queue;
 
 use base 'Amazon::SQS::Simple';
 
-sub DeleteQueue {
+sub Delete {
     my $self = shift;
     my $params = { Action => 'DeleteQueue' };
     
@@ -29,6 +29,7 @@ sub ReceiveMessage {
 
     # return value will be single hashref, or ref array of
     # hashrefs if NumberOfMessages was set and > 1
+    # Hashref has keys MessageBody and MessageId
     return $href->{Message};
 }
 
