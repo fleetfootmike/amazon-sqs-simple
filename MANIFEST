@@ -1,8 +1,12 @@
 Changes
-MANIFEST
-META.yml # Will be created by "make dist"
+MANIFEST			This list of files
+MANIFEST.SKIP
+META.yml
+Makefile
 Makefile.PL
 README
+bin/sqs-test
+bin/sqs-viewer.cgi
 lib/Amazon/SQS/Simple.pm
 lib/Amazon/SQS/Simple/Queue.pm
 t/00-load.t
