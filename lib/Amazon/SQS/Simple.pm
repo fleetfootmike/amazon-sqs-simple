@@ -32,8 +32,7 @@ sub new {
 
 sub to_string {
     my $self = shift;
-    (my $name = $self->Endpoint()) =~ s|.*/||;
-    return $name;
+    return $self->Endpoint();
 }
 
 sub GetQueue {

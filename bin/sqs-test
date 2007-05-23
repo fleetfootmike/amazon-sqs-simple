@@ -12,7 +12,7 @@ my $scr             = basename($0);
 my $max_messages    = shift || 10;
 my $base_time       = time();
 
-my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
+my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
 my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
 
 usage(0) if ($opts{help});
@@ -34,7 +34,10 @@ my $sqs = new Amazon::SQS::Simple(
 my $queues = $sqs->ListQueues();
 die "No queues found!" unless defined $queues;
 
-# my $q = $sqs->GetQueue('http://queue.amazonaws.com/A3R31KU3CI9X52/test1');
+print "Your queues:\n";
+for (@$queues) { print "$_\n" };
+
+#my $q = $sqs->CreateQueue('prio_2');
 my $q = $queues->[0];
 
 $q->SetAttribute('VisibilityTimeout', 10);
@@ -70,13 +73,13 @@ else {
             printlog("Sending $id");
         
             # pad message to c. 8K
-            my $msg = sprintf("%i:%080000i", $id, 0);
+            my $msg = sprintf("%i:%08000i", $id, 0);
             $q->SendMessage($msg);
         }
         wait();
     }
     else {
-        exit();
+        #exit();
         # child process
         # CONSUMER
         my $count = 0;
