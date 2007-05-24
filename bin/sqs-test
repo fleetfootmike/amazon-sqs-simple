@@ -55,7 +55,7 @@ print "Using Queue: $q\n";
 if ($opts{reset}) {
     printlog("Resetting the queue");
     while(defined(my $msg = $q->ReceiveMessage())) {
-        (my $id = substr($msg->{MessageBody}, 0, 2)) =~ s/^0+//;
+        my ($id) = split(/:/, $msg->{MessageBody});
         printlog("Deleting message $id");
         $q->DeleteMessage($msg->{MessageId});
     }
@@ -92,7 +92,7 @@ else {
             my $t_receive = time - $start;
             if (defined $msg) { 
                 $count++;
-                my ($id) = $msg->{MessageBody} =~ /^([0-9]+)/;
+                my ($id) = split(/:/, $msg->{MessageBody});
                 printlog(sprintf("Received message %s [%i/%i] in %0.3fs", $id, $count, $max_messages, $t_receive));
                 $q->DeleteMessage($msg->{MessageId});            
             }
