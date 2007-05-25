@@ -7,41 +7,46 @@ use Time::HiRes qw(time);
 
 use strict;
 
-my $duration       = 120; # test duration in seconds
-my $kids           = 3;
-my $padding_length = 60000;
-
-GetOptions(
-    'duration=i'       => \$duration,
-    'kids=i'           => \$kids,
-    'padding-length=i' => \$padding_length,
-);
-die "kids must be positive integer" unless $kids =~ /^\d+$/ && $kids > 0;
-
+my $duration        = 120; # test duration in seconds
+my $kids            = 3;
+my $padding_length  = 60000;
+my $help            = 0;
 my $scr             = basename($0);
 my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
 my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
 my ($q, $msg, @kids);
 
+GetOptions(
+    'duration=i'       => \$duration,
+    'kids=i'           => \$kids,
+    'padding-length=i' => \$padding_length,
+    'help'             => \$help,
+);
+die "kids must be positive integer" unless $kids =~ /^\d+$/ && $kids > 0;
+
+if ($help || @ARGV) {
+    print "Usage: $scr [--duration=N] [--kids=N] [--padding-length=N] [--help]\n";
+    exit(!$help);
+}
+
 my $sqs = new Amazon::SQS::Simple( 
     AWSAccessKeyId  => $AWSAccessKeyId, 
     SecretKey       => $SecretKey,
 );
-
 my $queues = $sqs->ListQueues();
 
 if ($queues) {
     $q = $queues->[0];
 }
 else {
-    $q = $sqs->CreateQueue('prio_2');
+    $q = $sqs->CreateQueue('prio_1');
 }
 
 printlog("Using queue: $q");
 printlog("Using padding length: $padding_length bytes");
 
-# set no timeout while resetting
-$q->SetAttribute('VisibilityTimeout', 0);
+# set low timeout while resetting
+$q->SetAttribute('VisibilityTimeout', 1);
 my $att = $q->GetAttributes();
 
 if ($att->{ApproximateNumberOfMessages}) {
