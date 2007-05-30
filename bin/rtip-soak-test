@@ -12,20 +12,22 @@ my $kids            = 3;
 my $padding_length  = 60000;
 my $help            = 0;
 my $scr             = basename($0);
+my $logfile         = "/var/tmp/$scr.log";
 my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
 my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
 my ($q, $msg, @kids);
 
 GetOptions(
-    'duration=i'       => \$duration,
-    'kids=i'           => \$kids,
-    'padding-length=i' => \$padding_length,
-    'help'             => \$help,
+    'duration=i'        => \$duration,
+    'kids=i'            => \$kids,
+    'padding-length=i'  => \$padding_length,
+    'help'              => \$help,
+    'logfile=s'         => \$logfile,
 );
 die "kids must be positive integer" unless $kids =~ /^\d+$/ && $kids > 0;
 
 if ($help || @ARGV) {
-    print "Usage: $scr [--duration=N] [--kids=N] [--padding-length=N] [--help]\n";
+    print "Usage: $scr [--duration=N] [--kids=N] [--padding-length=N] [--logfile=FILE] [--help]\n";
     exit(!$help);
 }
 
@@ -42,6 +44,8 @@ else {
     $q = $sqs->CreateQueue('prio_1');
 }
 
+open(LOG, ">>$logfile") or die "On opening $logfile for appending: $!";
+
 printlog("Using queue: $q");
 printlog("Using padding length: $padding_length bytes");
 
@@ -53,7 +57,7 @@ if ($att->{ApproximateNumberOfMessages}) {
     printlog("Approx. " . $att->{ApproximateNumberOfMessages} . " messages in queue - resetting");
 
     while(defined(my $msg = $q->ReceiveMessage())) {
-        my ($id) = split(/:/, $msg->{MessageBody});
+        my ($ppid, $id) = split(/:/, $msg->{MessageBody});
         printlog("Deleting message $id");
         $q->DeleteMessage($msg->{MessageId});
     }
@@ -87,6 +91,7 @@ LOOP: while(1) {
         $q->SendMessage($msg);
     };
     printlog($@, {level => 'ERROR'}) if $@;
+    sleep(2);
 }
 
 my $sleep = 30;
@@ -96,7 +101,7 @@ sleep($sleep);
 printlog("Killing kids");
 
 kill 'INT' => @kids;
-
+close LOG;
 exit;
 
 sub make_new_child {
@@ -150,5 +155,10 @@ sub printlog {
 
     my $level = $opts->{level} || 'INFO';
 
-    printf("%s %i\@$scr [%s] %s\n", scalar(gmtime), $$, $level, $msg);
+    my $logline = sprintf("%s %i\@$scr [%s] %s\n", scalar(gmtime), $$, $level, $msg);
+    syswrite LOG, $logline;
+    if (-t STDIN) {
+        syswrite STDOUT, $logline;
+    }
 }
+
