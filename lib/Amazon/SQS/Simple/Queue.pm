@@ -4,7 +4,9 @@ use base 'Amazon::SQS::Simple';
 
 sub Delete {
     my $self = shift;
+    my $force = shift;
     my $params = { Action => 'DeleteQueue' };
+    $params->{ForceDeletion} = 'true' if $force;
     
     my $href = $self->dispatch($params);    
 }
