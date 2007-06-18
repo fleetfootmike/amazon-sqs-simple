@@ -37,8 +37,8 @@ die "No queues found!" unless defined $queues;
 print "Your queues:\n";
 for (@$queues) { print "$_\n" };
 
-#my $q = $sqs->CreateQueue('prio_2');
-my $q = $queues->[0];
+my $q = $sqs->CreateQueue('prio_1');
+# my $q = $queues->[0];
 
 $q->SetAttribute('VisibilityTimeout', 10);
 

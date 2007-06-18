@@ -1,0 +1,113 @@
+#!/usr/bin/perl -w
+
+use File::Basename;
+use Getopt::Long;
+use Amazon::SQS::Simple;
+
+my %opts;
+GetOptions(\%opts, 'reset', 'timeout', 'help', 'delete', 'create', 'force', 'info');
+
+my $scr             = basename($0);
+my $queue_name      = shift or usage(1);
+
+my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
+my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
+
+usage(0) if ($opts{help});
+usage(1) if @ARGV;
+
+sub usage {
+    my $status = shift || 0;
+    print <<USAGE;
+Usage: $scr [OPTIONS] queue-name
+
+OPTIONS:
+    --reset
+        remove all messages from queue
+
+    --timeout=SECS
+        set the queue's default visibility timeout in seconds
+
+    --create
+        create a queue with the given name
+
+    --delete
+        delete the queue with the given name, unless
+        it contains messages (use --force to override)
+
+    --force
+        use with --delete to force deletion even if the
+        queue contains messages
+
+    --info
+        print info about the queue
+
+    --help
+        show this help documentation
+USAGE
+
+    exit($status);
+}
+
+use strict;
+
+my $sqs = new Amazon::SQS::Simple( 
+    AWSAccessKeyId  => $AWSAccessKeyId, 
+    SecretKey       => $SecretKey,
+);
+
+my $q;
+q_create();
+
+if ($opts{timeout}) {
+    q_timeout($opts{timeout});
+}
+
+if ($opts{info}) {
+    q_info();
+}
+
+if ($opts{reset}) {
+    q_reset();
+}
+
+if ($opts{delete}) {
+    q_delete($opts{force});
+}
+
+sub q_create {
+    $q = $sqs->CreateQueue($queue_name);
+}
+
+sub q_delete {
+    my $force = shift;
+    my $href = $q->Delete($force);
+}
+
+sub q_info {
+    print "Endpoint: $q\nAttributes:\n";
+    my $attrs = $q->GetAttributes();
+    for (keys %$attrs) {
+        print "$_ => $attrs->{$_}\n";
+    }
+}
+
+sub q_reset {
+    my $t = q_timeout();
+    q_delete(1);
+    q_create();
+    q_timeout($t);
+}
+
+sub q_timeout {
+    my $t = shift;
+
+    if (defined $t) { 
+        $q->SetAttribute('VisibilityTimeout', $t);
+    }
+    else {
+        return $q->GetAttribute('VisibilityTimeout');
+    }
+}
+
+
