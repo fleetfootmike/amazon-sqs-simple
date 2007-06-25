@@ -1,5 +1,6 @@
 package Amazon::SQS::Simple;
 
+use Carp qw( croak );
 use Digest::HMAC_SHA1;
 use LWP::UserAgent;
 use MIME::Base64;
@@ -27,6 +28,9 @@ sub new {
         SignatureVersion => 1,
         @_,
     };
+    if (!$self->{AWSAccessKeyId} || !$self->{SecretKey}) {
+        croak "Missing AWSAccessKey or SecretKey";
+    }
     return bless($self, $class);
 }
 

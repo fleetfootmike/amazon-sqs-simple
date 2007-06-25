@@ -5,13 +5,13 @@ use Getopt::Long;
 use Amazon::SQS::Simple;
 
 my %opts;
-GetOptions(\%opts, 'reset', 'timeout=i', 'help', 'delete', 'create', 'force', 'info');
+GetOptions(\%opts, 'reset', 'timeout=i', 'help', 'delete', 'create', 'force', 'info', 'access-key', 'secret-key');
 
 my $scr             = basename($0);
 my $queue_name      = shift or usage(1);
 
-my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
-my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
+my $AWSAccessKeyId  = $opts{'access-key'} || $ENV{AWS_ACCESS_KEY}; 
+my $SecretKey       = $opts{'secret-key'} || $ENV{AWS_SECRET_KEY};
 
 usage(0) if ($opts{help});
 usage(1) if @ARGV;
@@ -44,6 +44,14 @@ OPTIONS:
 
     --help
         show this help documentation
+
+    --access-key
+        Your AWS access key (or set AWS_ACCESS_KEY env 
+        variable)
+
+    --secret-key
+        Your AWS secret key (or set AWS_SECRET_KEY env
+        variable)
 USAGE
 
     exit($status);
