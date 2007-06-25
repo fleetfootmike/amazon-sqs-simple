@@ -5,7 +5,7 @@ use Getopt::Long;
 use Amazon::SQS::Simple;
 
 my %opts;
-GetOptions(\%opts, 'reset', 'timeout', 'help', 'delete', 'create', 'force', 'info');
+GetOptions(\%opts, 'reset', 'timeout=i', 'help', 'delete', 'create', 'force', 'info');
 
 my $scr             = basename($0);
 my $queue_name      = shift or usage(1);
@@ -106,7 +106,8 @@ sub q_timeout {
         $q->SetAttribute('VisibilityTimeout', $t);
     }
     else {
-        return $q->GetAttribute('VisibilityTimeout');
+        my $href = $q->GetAttributes({Attribute => 'VisibilityTimeout'});
+        return $href->{VisibilityTimeout};
     }
 }
 

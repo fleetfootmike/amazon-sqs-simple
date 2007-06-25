@@ -22,6 +22,16 @@ sub SendMessage {
     return $href->{MessageId};
 }
 
+sub ChangeMessageVisibility {
+    my ($self, $message_id, $timeout, $params) = @_;
+    
+    $params->{Action} = 'ChangeMessageVisibility';
+    $params->{MessageId} = $message_id;
+    $params->{VisibilityTimeout} = $timeout;
+    
+    my $href = $self->dispatch($params);    
+}
+
 sub ReceiveMessage {
     my ($self, $params) = @_;
     
@@ -29,8 +39,8 @@ sub ReceiveMessage {
     
     my $href = $self->dispatch($params);
 
-    # return value will be single hashref, or ref array of
-    # hashrefs if NumberOfMessages was set and > 1
+    # return value will be single hashref, or ref array of
+    # hashrefs if NumberOfMessages was set and > 1
     # Hashref has keys MessageBody and MessageId
     return $href->{Message};
 }
