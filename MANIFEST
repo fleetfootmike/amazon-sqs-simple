@@ -4,6 +4,7 @@ MANIFEST.SKIP
 META.yml
 Makefile.PL
 README
+bin/queue-toolkit
 bin/sqs-test
 bin/sqs-viewer.cgi
 lib/Amazon/SQS/Simple.pm
