@@ -16,7 +16,7 @@ use constant MAX_GET_MSG_SIZE => 4096; # Messages larger than this size will be 
                                        # using a POST request. This feature requires
                                        # SQS_VERSION 2007-05-01 or later.
                                        
-use overload '""' => \&to_string;
+use overload '""' => \&_to_string;
 
 our $VERSION   = '0.1';
 our @EXPORT_OK = qw( timestamp );
@@ -39,7 +39,7 @@ sub new {
     return bless($self, $class);
 }
 
-sub to_string {
+sub _to_string {
     my $self = shift;
     return $self->Endpoint();
 }
@@ -58,7 +58,7 @@ sub CreateQueue {
     $params{Action}    = 'CreateQueue';
     $params{QueueName} = $queue_name;
         
-    my $href = $self->dispatch(\%params);
+    my $href = $self->_dispatch(\%params);
     
     if ($href->{QueueUrl}) {
         return Amazon::SQS::Simple::Queue->new(
@@ -76,7 +76,7 @@ sub ListQueues {
     
     $params{Action} = 'ListQueues';
         
-    my $href = $self->dispatch(\%params, ['QueueUrl']);
+    my $href = $self->_dispatch(\%params, ['QueueUrl']);
     
     if ($href->{QueueUrl}) {
         my @result = map {
@@ -112,7 +112,7 @@ sub AUTOLOAD {
 # Explicitly define DESTROY so that it doesn't get autoloaded
 sub DESTROY {}
 
-sub dispatch {
+sub _dispatch {
     my $self         = shift;
     my $params       = shift || {};
     my $force_array  = shift || [];
@@ -247,7 +247,7 @@ Service.
 
 =over 2
 
-=item new($ACCESS_KEY, $SECRET_KEY [, \%OPTS])
+=item new($access_key, $secret_key [, \%opts])
 
 Constructs a new Amazon::SQS::Simple object
 
@@ -257,24 +257,33 @@ Constructs a new Amazon::SQS::Simple object
 
 =over 2
 
-=item GetQueue($QUEUE_ENDPOINT [, \%OPTS])
+=item GetQueue($queue_endpoint [, \%opts])
 
 Gets the queue with the given endpoint. Returns a 
 C<Amazon::SQS::Simple::Queue> object. (See L<Amazon::SQS::Simple::Queue> for details.)
 
-=item CreateQueue($QUEUE_NAME [, \%OPTS])
+=item CreateQueue($queue_name [, \%opts])
 
 Creates a new queue with the given name. Returns a 
 C<Amazon::SQS::Simple::Queue> object. (See L<Amazon::SQS::Simple::Queue> for details.)
 
-=item ListQueues([ \%OPTS ])
+=item ListQueues([ \%opts ])
 
 Gets a list of all your current queues. Returns an array of 
 C<Amazon::SQS::Simple::Queue> objects. (See L<Amazon::SQS::Simple::Queue> for details.)
 
 =back
 
-=head1 ACKNOWLEDGEMENTS
+=head1 FUNCTIONS
+
+=over 2
+
+=item timestamp($SECONDS)
+
+Takes a time in seconds since the epoch and returns a formatted timestamp suitable for
+using in a Timestamp or Expires optional method parameter.
+
+=back
 
 =head1 AUTHOR
 

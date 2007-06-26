@@ -8,7 +8,7 @@ sub Delete {
     my $params = { Action => 'DeleteQueue' };
     $params->{ForceDeletion} = 'true' if $force;
     
-    my $href = $self->dispatch($params);    
+    my $href = $self->_dispatch($params);    
 }
 
 sub SendMessage {
@@ -17,7 +17,7 @@ sub SendMessage {
     $params{Action} = 'SendMessage';
     $params{MessageBody} = $message;
     
-    my $href = $self->dispatch(\%params);    
+    my $href = $self->_dispatch(\%params);    
     
     return $href->{MessageId};
 }
@@ -29,7 +29,7 @@ sub ChangeMessageVisibility {
     $params{MessageId} = $message_id;
     $params{VisibilityTimeout} = $timeout;
     
-    my $href = $self->dispatch(\%params);    
+    my $href = $self->_dispatch(\%params);    
 }
 
 sub ReceiveMessage {
@@ -37,7 +37,7 @@ sub ReceiveMessage {
     
     $params{Action} = 'ReceiveMessage';
     
-    my $href = $self->dispatch(\%params);
+    my $href = $self->_dispatch(\%params);
 
     # return value will be single hashref, or ref array of
     # hashrefs if NumberOfMessages was set and > 1
@@ -51,7 +51,7 @@ sub DeleteMessage {
     $params{Action} = 'DeleteMessage';
     $params{MessageId} = $message_id;
     
-    my $href = $self->dispatch(\%params);
+    my $href = $self->_dispatch(\%params);
 }
 
 sub PeekMessage {
@@ -60,7 +60,7 @@ sub PeekMessage {
     $params{Action} = 'PeekMessage';
     $params{MessageId} = $message_id;
     
-    my $href = $self->dispatch(\%params);
+    my $href = $self->_dispatch(\%params);
     
     return $href->{Message};
 }
@@ -71,7 +71,7 @@ sub GetAttributes {
     $params{Action} = 'GetQueueAttributes';
     $params{Attribute} ||= 'All';
     
-    my $href = $self->dispatch(\%params, [ 'AttributedValue' ]);
+    my $href = $self->_dispatch(\%params, [ 'AttributedValue' ]);
         
     my %result;
     if ($href->{'AttributedValue'}) {
@@ -89,7 +89,7 @@ sub SetAttribute {
     $params{Attribute} = $key;
     $params{Value}     = $value;
     
-    my $href = $self->dispatch(\%params);
+    my $href = $self->_dispatch(\%params);
 }
 
 1;
