@@ -284,6 +284,42 @@ using in a Timestamp or Expires optional method parameter.
 
 =back
 
+=head1 OPTIONS
+
+All the methods in this class accept a hash of optional parameters. The keys in
+the hash are as follows:
+
+=over 2
+
+=item AWSAccessKeyId => STRING
+
+The AWS Access Key Id to use with the method call. If not provided, Amazon::SQS::Simple uses
+the value passed to the constructor.
+
+=item SecretKey => STRING
+
+The Secret Key to use with the method call. If not provided, Amazon::SQS::Simple uses
+the value passed to the constructor.
+
+=item Timestamp => TIMESTAMP
+
+All methods are automatically given a timestamp of the time at which they are called,
+but you can override this value if you need to. The value for this key should be a
+timestamp as returned by the Amazon::SQS::Simple::timestamp() function.
+
+You generally do not need to supply this option.
+
+=item Expires => TIMESTAMP
+
+All methods are automatically given a timestamp of the time at which they are called.
+You can alternatively set an expiry time by providing an Expires option. The value
+for this key should be a timestamp as returned by the C<Amazon::SQS::Simple::timestamp()>
+function.
+
+You generally do not need to supply this option.
+
+=back
+
 =head1 AUTHOR
 
 Copyright 2007 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
