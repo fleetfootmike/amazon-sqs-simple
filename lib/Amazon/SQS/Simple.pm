@@ -213,7 +213,6 @@ sub _get_signed_url {
 
 __END__
 
-
 =head1 NAME
 
 Amazon::SQS::Simple - OO API for accessing the Amazon Simple Queue 
@@ -247,7 +246,7 @@ Service.
 
 =over 2
 
-=item new($access_key, $secret_key [, \%opts])
+=item new($access_key, $secret_key, [%opts])
 
 Constructs a new Amazon::SQS::Simple object
 
@@ -257,17 +256,17 @@ Constructs a new Amazon::SQS::Simple object
 
 =over 2
 
-=item GetQueue($queue_endpoint [, \%opts])
+=item GetQueue($queue_endpoint, [%opts])
 
 Gets the queue with the given endpoint. Returns a 
 C<Amazon::SQS::Simple::Queue> object. (See L<Amazon::SQS::Simple::Queue> for details.)
 
-=item CreateQueue($queue_name [, \%opts])
+=item CreateQueue($queue_name, [%opts])
 
 Creates a new queue with the given name. Returns a 
 C<Amazon::SQS::Simple::Queue> object. (See L<Amazon::SQS::Simple::Queue> for details.)
 
-=item ListQueues([ \%opts ])
+=item ListQueues([%opts])
 
 Gets a list of all your current queues. Returns an array of 
 C<Amazon::SQS::Simple::Queue> objects. (See L<Amazon::SQS::Simple::Queue> for details.)
@@ -278,7 +277,7 @@ C<Amazon::SQS::Simple::Queue> objects. (See L<Amazon::SQS::Simple::Queue> for de
 
 =over 2
 
-=item timestamp($SECONDS)
+=item timestamp($seconds)
 
 Takes a time in seconds since the epoch and returns a formatted timestamp suitable for
 using in a Timestamp or Expires optional method parameter.
