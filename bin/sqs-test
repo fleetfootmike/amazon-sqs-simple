@@ -43,7 +43,7 @@ print '=' x 80 . "\n";
 print "Attributes for $q:\n";
 my $attrs = $q->GetAttributes();
 for (keys %$attrs) {
-    print "$_ => $attrs->{$_}\n";
+    print "$_: $attrs->{$_}\n";
 }
 print '=' x 80 . "\n";
 
