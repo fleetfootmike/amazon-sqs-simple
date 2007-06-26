@@ -26,10 +26,7 @@ sub usage {
 
 use strict;
 
-my $sqs = new Amazon::SQS::Simple( 
-    AWSAccessKeyId  => $AWSAccessKeyId, 
-    SecretKey       => $SecretKey,
-);
+my $sqs = new Amazon::SQS::Simple($AWSAccessKeyId, $SecretKey);
 
 my $queues = $sqs->ListQueues();
 die "No queues found!" unless defined $queues;

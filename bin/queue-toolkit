@@ -59,10 +59,7 @@ USAGE
 
 use strict;
 
-my $sqs = new Amazon::SQS::Simple( 
-    AWSAccessKeyId  => $AWSAccessKeyId, 
-    SecretKey       => $SecretKey,
-);
+my $sqs = new Amazon::SQS::Simple($AWSAccessKeyId, $SecretKey);
 
 my $q;
 q_create();
@@ -114,7 +111,7 @@ sub q_timeout {
         $q->SetAttribute('VisibilityTimeout', $t);
     }
     else {
-        my $href = $q->GetAttributes({Attribute => 'VisibilityTimeout'});
+        my $href = $q->GetAttributes();
         return $href->{VisibilityTimeout};
     }
 }

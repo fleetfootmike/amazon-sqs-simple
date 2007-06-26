@@ -23,7 +23,12 @@ our @EXPORT_OK = qw( timestamp );
 
 sub new {
     my $class = shift;
+    my $access_key = shift;
+    my $secret_key = shift;
+    
     my $self = {
+        AWSAccessKeyId => $access_key,
+        SecretKey => $secret_key,
         Endpoint => +BASE_ENDPOINT,
         SignatureVersion => 1,
         @_,
@@ -48,12 +53,12 @@ sub GetQueue {
 }
 
 sub CreateQueue {
-    my ($self, $queue_name, $params) = @_;
+    my ($self, $queue_name, %params) = @_;
     
-    $params->{Action}    = 'CreateQueue';
-    $params->{QueueName} = $queue_name;
+    $params{Action}    = 'CreateQueue';
+    $params{QueueName} = $queue_name;
         
-    my $href = $self->dispatch($params);
+    my $href = $self->dispatch(\%params);
     
     if ($href->{QueueUrl}) {
         return Amazon::SQS::Simple::Queue->new(
@@ -62,16 +67,16 @@ sub CreateQueue {
         );
     }
     else {
-        die "Failed to create a queue: " . $response->status_line;
+        croak("Failed to create a queue: " . $response->status_line);
     }
 }
 
 sub ListQueues {
-    my ($self, $queue_name, $params) = @_;
+    my ($self, %params) = @_;
     
-    $params->{Action} = 'ListQueues';
+    $params{Action} = 'ListQueues';
         
-    my $href = $self->dispatch($params, ['QueueUrl']);
+    my $href = $self->dispatch(\%params, ['QueueUrl']);
     
     if ($href->{QueueUrl}) {
         my @result = map {
@@ -205,3 +210,75 @@ sub _get_signed_url {
 }
 
 1;
+
+__END__
+
+
+=head1 NAME
+
+Amazon::SQS::Simple - OO API for accessing the Amazon Simple Queue 
+Service
+
+=head1 SYNOPSIS
+
+    use Amazon::SQS::Simple;
+
+    my $access_key = 'foo'; # Your AWS Access Key ID
+    my $secret_key = 'bar'; # Your AWS Secret Key
+
+    my $sqs = new Amazon::SQS::Simple($access_key, $secret_key);
+
+    my $q = $sqs->CreateQueue('queue_name');
+
+    $q->SendMessage('Hello world!');
+
+    my $msg = $q->ReceiveMessage();
+
+    print $msg->{MessageBody} # Hello world!
+
+    $q->DeleteMessage($msg->{MessageId});
+
+=head1 INTRODUCTION
+
+Amazon::SQS::Simple is an OO API for the Amazon Simple Queue
+Service.
+
+=head1 CONSTRUCTOR
+
+=over 2
+
+=item new($ACCESS_KEY, $SECRET_KEY [, \%OPTS])
+
+Constructs a new Amazon::SQS::Simple object
+
+=back
+
+=head1 METHODS
+
+=over 2
+
+=item GetQueue($QUEUE_ENDPOINT [, \%OPTS])
+
+Gets the queue with the given endpoint. Returns a 
+C<Amazon::SQS::Simple::Queue> object. (See L<Amazon::SQS::Simple::Queue> for details.)
+
+=item CreateQueue($QUEUE_NAME [, \%OPTS])
+
+Creates a new queue with the given name. Returns a 
+C<Amazon::SQS::Simple::Queue> object. (See L<Amazon::SQS::Simple::Queue> for details.)
+
+=item ListQueues([ \%OPTS ])
+
+Gets a list of all your current queues. Returns an array of 
+C<Amazon::SQS::Simple::Queue> objects. (See L<Amazon::SQS::Simple::Queue> for details.)
+
+=back
+
+=head1 ACKNOWLEDGEMENTS
+
+=head1 AUTHOR
+
+Copyright 2007 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
+
+=cut
+

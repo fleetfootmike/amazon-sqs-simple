@@ -12,32 +12,32 @@ sub Delete {
 }
 
 sub SendMessage {
-    my ($self, $message, $params) = @_;
+    my ($self, $message, %params) = @_;
     
-    $params->{Action} = 'SendMessage';
-    $params->{MessageBody} = $message;
+    $params{Action} = 'SendMessage';
+    $params{MessageBody} = $message;
     
-    my $href = $self->dispatch($params);    
+    my $href = $self->dispatch(\%params);    
     
     return $href->{MessageId};
 }
 
 sub ChangeMessageVisibility {
-    my ($self, $message_id, $timeout, $params) = @_;
+    my ($self, $message_id, $timeout, %params) = @_;
     
-    $params->{Action} = 'ChangeMessageVisibility';
-    $params->{MessageId} = $message_id;
-    $params->{VisibilityTimeout} = $timeout;
+    $params{Action} = 'ChangeMessageVisibility';
+    $params{MessageId} = $message_id;
+    $params{VisibilityTimeout} = $timeout;
     
-    my $href = $self->dispatch($params);    
+    my $href = $self->dispatch(\%params);    
 }
 
 sub ReceiveMessage {
-    my ($self, $params) = @_;
+    my ($self, %params) = @_;
     
-    $params->{Action} = 'ReceiveMessage';
+    $params{Action} = 'ReceiveMessage';
     
-    my $href = $self->dispatch($params);
+    my $href = $self->dispatch(\%params);
 
     # return value will be single hashref, or ref array of
     # hashrefs if NumberOfMessages was set and > 1
@@ -46,32 +46,32 @@ sub ReceiveMessage {
 }
 
 sub DeleteMessage {
-    my ($self, $message_id, $params) = @_;
+    my ($self, $message_id, %params) = @_;
     
-    $params->{Action} = 'DeleteMessage';
-    $params->{MessageId} = $message_id;
+    $params{Action} = 'DeleteMessage';
+    $params{MessageId} = $message_id;
     
-    my $href = $self->dispatch($params);
+    my $href = $self->dispatch(\%params);
 }
 
 sub PeekMessage {
-    my ($self, $message_id, $params) = @_;
+    my ($self, $message_id, %params) = @_;
     
-    $params->{Action} = 'PeekMessage';
-    $params->{MessageId} = $message_id;
+    $params{Action} = 'PeekMessage';
+    $params{MessageId} = $message_id;
     
-    my $href = $self->dispatch($params);
+    my $href = $self->dispatch(\%params);
     
     return $href->{Message};
 }
 
 sub GetAttributes {
-    my ($self, $params) = @_;
+    my ($self, %params) = @_;
     
-    $params->{Action} = 'GetQueueAttributes';
-    $params->{Attribute} ||= 'All';
+    $params{Action} = 'GetQueueAttributes';
+    $params{Attribute} ||= 'All';
     
-    my $href = $self->dispatch($params, [ 'AttributedValue' ]);
+    my $href = $self->dispatch(\%params, [ 'AttributedValue' ]);
         
     my %result;
     if ($href->{'AttributedValue'}) {
@@ -83,13 +83,13 @@ sub GetAttributes {
 }
 
 sub SetAttribute {
-    my ($self, $key, $value, $params) = @_;
+    my ($self, $key, $value, %params) = @_;
     
-    $params->{Action}    = 'SetQueueAttributes';
-    $params->{Attribute} = $key;
-    $params->{Value}     = $value;
+    $params{Action}    = 'SetQueueAttributes';
+    $params{Attribute} = $key;
+    $params{Value}     = $value;
     
-    my $href = $self->dispatch($params);
+    my $href = $self->dispatch(\%params);
 }
 
 1;

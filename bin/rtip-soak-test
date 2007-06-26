@@ -33,10 +33,7 @@ if ($help || @ARGV) {
     exit(!$help);
 }
 
-my $sqs = new Amazon::SQS::Simple( 
-    AWSAccessKeyId  => $AWSAccessKeyId, 
-    SecretKey       => $SecretKey,
-);
+my $sqs = new Amazon::SQS::Simple($AWSAccessKeyId, $SecretKey);
 my $queues = $sqs->ListQueues();
 
 if ($queues) {
