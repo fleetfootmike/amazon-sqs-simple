@@ -45,11 +45,11 @@ OPTIONS:
     --help
         show this help documentation
 
-    --access-key
+    --access-key=KEY
         Your AWS access key (or set AWS_ACCESS_KEY env 
         variable)
 
-    --secret-key
+    --secret-key=KEY
         Your AWS secret key (or set AWS_SECRET_KEY env
         variable)
 USAGE
