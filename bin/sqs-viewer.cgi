@@ -55,7 +55,7 @@ sub viewqueue {
     my $q = $sqs->GetQueue($cgi->param('q'));
     my $attributes = $q->GetAttributes();
     
-    my $msg = $q->ReceiveMessage({VisibilityTimeout => 0});
+    my $msg = $q->ReceiveMessage(VisibilityTimeout => 0);
     my $body = $msg->{MessageBody};
     $body =~ s/.{60}/$&\n/g;
     
