@@ -47,14 +47,14 @@ my $href;
 # method to be processed
 my $i = 0;
 do {
-    sleep 1 if $i++;
+    sleep 2 if $i++;
     $href = $q->GetAttributes();
 } while ($href->{VisibilityTimeout} != $timeout && $i < 5);
 
 ok(
     $href->{VisibilityTimeout} == $timeout
-    , "GetAttributes (attempt $i)"
-);
+    , "GetAttributes"
+) or diag("Failed after $i attempts, sent $timeout, got back $href->{VisibilityTimeout}");
 
 my $msg_id = $q->SendMessage($msg_small);
 ok ($msg_id, 'SendMessage (small message)');
