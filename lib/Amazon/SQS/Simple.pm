@@ -224,18 +224,25 @@ Service
 
     my $access_key = 'foo'; # Your AWS Access Key ID
     my $secret_key = 'bar'; # Your AWS Secret Key
-
+    
+    # Create an SQS object
     my $sqs = new Amazon::SQS::Simple($access_key, $secret_key);
 
+    # Create a new queue
     my $q = $sqs->CreateQueue('queue_name');
 
+    # Send a message
     $q->SendMessage('Hello world!');
 
+    # Retrieve a message
     my $msg = $q->ReceiveMessage();
-
     print $msg->{MessageBody} # Hello world!
 
+    # Delete the message
     $q->DeleteMessage($msg->{MessageId});
+
+    # Delete the queue
+    $q->Delete();
 
 =head1 INTRODUCTION
 
