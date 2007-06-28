@@ -22,16 +22,6 @@ sub SendMessage {
     return $href->{MessageId};
 }
 
-sub ChangeMessageVisibility {
-    my ($self, $message_id, $timeout, %params) = @_;
-    
-    $params{Action} = 'ChangeMessageVisibility';
-    $params{MessageId} = $message_id;
-    $params{VisibilityTimeout} = $timeout;
-    
-    my $href = $self->_dispatch(\%params);    
-}
-
 sub ReceiveMessage {
     my ($self, %params) = @_;
     
@@ -65,6 +55,16 @@ sub PeekMessage {
     return $href->{Message};
 }
 
+sub ChangeMessageVisibility {
+    my ($self, $message_id, $timeout, %params) = @_;
+    
+    $params{Action} = 'ChangeMessageVisibility';
+    $params{MessageId} = $message_id;
+    $params{VisibilityTimeout} = $timeout;
+    
+    my $href = $self->_dispatch(\%params);    
+}
+
 sub GetAttributes {
     my ($self, %params) = @_;
     
@@ -90,6 +90,61 @@ sub SetAttribute {
     $params{Value}     = $value;
     
     my $href = $self->_dispatch(\%params);
+}
+
+sub ListGrants {
+    my ($self, %params) = @_;
+    
+    $params{Action} = 'ListGrants';
+    
+    my $href = $self->_dispatch(\%params, [ 'Grantee', 'GrantList' ]);
+
+    # use Data::Dumper;
+    # print STDERR Dumper $href;
+
+    my $result;
+    
+    foreach my $gl (@{$href->{GrantList}}) {
+        $result->{$gl->{Permission}} = $gl->{Grantee};
+        foreach my $g (@{$gl->{Grantee}}) {
+            delete $g->{'xmlns:xsi'}; 
+            delete $g->{'xsi:type'}; 
+        }
+    }
+    return $result;
+}
+
+sub AddGrant {
+    my $self = shift;
+    return $self->_AddRemoveGrant('AddGrant', @_);
+}
+
+sub RemoveGrant {
+    my $self = shift;
+    return $self->_AddRemoveGrant('RemoveGrant', @_);
+}
+
+sub _AddRemoveGrant {
+    my ($self, $action, $identifier, $permission, %params) = @_;
+    
+    $params{Action}     = $action;
+    $params{Permission} = $permission;
+    
+    if ($params{IdentifierType} && uc($params{IdentifierType}) eq 'ID') {
+        $params{'Grantee.ID'} = $identifier;
+    }
+    else {
+        $params{'Grantee.EmailAddress'} = $identifier;
+    }
+    delete $params{IdentifierType};
+    
+    my $href = $self->_dispatch(\%params, [ 'Grantee' ]);
+    
+    foreach (@{$href->{GrantList}{Grantee}}) {
+        delete $_->{'xmlns:xsi'}; 
+        delete $_->{'xsi:type'}; 
+    }
+    return $href->{GrantList}{Grantee};
 }
 
 1;
@@ -172,13 +227,9 @@ attribute names are returned:
 
 =over
 
-=item *
+=item VisibilityTimeout
 
-VisibilityTimeout
-
-=item *
-
-ApproximateNumberOfMessages
+=item ApproximateNumberOfMessages
 
 =back
 
@@ -186,6 +237,24 @@ ApproximateNumberOfMessages
 
 Sets the value for a queue attribute. Currently the only valid
 attribute name is C<VisibilityTimeout>.
+
+=item ListGrants([%opts])
+
+List the grantees for this queue. Returns a reference to an array of hashrefs. 
+Each hashref has two keys:
+
+=over 2
+
+=item ID
+
+A unique identifier for the user
+
+=item DisplayName
+
+The user's display name, as registered on Amazon.com. The display name for a
+user can change over time.
+
+=back
 
 =back
 

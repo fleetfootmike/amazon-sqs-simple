@@ -1,0 +1,46 @@
+#!/usr/bin/perl -w
+
+use lib '../lib';
+use Amazon::SQS::Simple;
+use Data::Dumper;
+$Data::Dumper::Indent = 1;
+my $AWSAccessKeyId  = $ENV{AWS_ACCESS_KEY}; 
+my $SecretKey       = $ENV{AWS_SECRET_KEY};
+
+use strict;
+
+my $sqs = new Amazon::SQS::Simple($AWSAccessKeyId, $SecretKey);
+
+my $q = $sqs->CreateQueue('test-grants');
+
+my $g = $q->ListGrants();
+print Dumper $g;
+print (('-' x 80) . "\n");
+
+my $permission = 'ReceiveMessage';
+my $id = 'a0bd3df56da83ac3a85f8ee85b006d9e43d82486e6197fdb07c6ecc58d08b794'; # sw@netcetera.org
+
+$q->AddGrant('sw@netcetera.org', $permission);
+
+$g = $q->ListGrants();
+print Dumper $g;
+print (('-' x 80) . "\n");
+
+$q->RemoveGrant('sw@netcetera.org', $permission);
+
+$g = $q->ListGrants();
+print Dumper $g;
+print (('-' x 80) . "\n");
+
+# $q->AddGrant($id, $permission, IdentifierType => 'ID');
+# 
+# $g = $q->ListGrants();
+# print Dumper $g;
+# print (('-' x 80) . "\n");
+# 
+# $q->RemoveGrant($id, $permission, IdentifierType => 'ID');
+# 
+# $g = $q->ListGrants();
+# print Dumper $g;
+# print (('-' x 80) . "\n");
+

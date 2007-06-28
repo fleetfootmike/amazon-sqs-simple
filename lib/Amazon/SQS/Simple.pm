@@ -138,7 +138,7 @@ sub _dispatch {
     my $url      = $self->_get_signed_url($params);
     my $ua       = LWP::UserAgent->new();
     my $response;
-    
+
     if ($post_request) {
         $response = $ua->post(
             $url, 
@@ -263,7 +263,7 @@ Constructs a new Amazon::SQS::Simple object
 
 =over 2
 
-=item GetQueue($queue_endpoint, [%opts])
+=item GetQueue($queue_endpoint)
 
 Gets the queue with the given endpoint. Returns a 
 C<Amazon::SQS::Simple::Queue> object. (See L<Amazon::SQS::Simple::Queue> for details.)
@@ -273,10 +273,30 @@ C<Amazon::SQS::Simple::Queue> object. (See L<Amazon::SQS::Simple::Queue> for det
 Creates a new queue with the given name. Returns a 
 C<Amazon::SQS::Simple::Queue> object. (See L<Amazon::SQS::Simple::Queue> for details.)
 
+Options for CreateQueue:
+
+=over 2
+
+=item DefaultVisibilityTimeout => SECONDS
+
+Set the default visibility timeout for this queue
+
+=back
+
 =item ListQueues([%opts])
 
 Gets a list of all your current queues. Returns an array of 
 C<Amazon::SQS::Simple::Queue> objects. (See L<Amazon::SQS::Simple::Queue> for details.)
+
+Options for ListQueues:
+
+=over 2
+
+=item QueueNamePrefix => STRING
+
+Only those queues whose name begins with the specified string are returned.
+
+=back
 
 =back
 
@@ -291,10 +311,9 @@ using in a Timestamp or Expires optional method parameter.
 
 =back
 
-=head1 OPTIONS
+=head1 STANDARD OPTIONS
 
-All the methods in this class accept a hash of optional parameters. The keys in
-the hash are as follows:
+The following options can be supplied with any of the listed methods.
 
 =over 2
 
