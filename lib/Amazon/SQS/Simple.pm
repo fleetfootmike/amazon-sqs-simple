@@ -10,11 +10,11 @@ use XML::Simple;
 
 use base qw(Exporter);
 
-use constant SQS_VERSION      => '2007-05-01';
-use constant BASE_ENDPOINT    => 'http://queue.amazonaws.com';
-use constant MAX_GET_MSG_SIZE => 4096; # Messages larger than this size will be sent
-                                       # using a POST request. This feature requires
-                                       # SQS_VERSION 2007-05-01 or later.
+use constant DEFAULT_SQS_VERSION => '2007-05-01';
+use constant BASE_ENDPOINT       => 'http://queue.amazonaws.com';
+use constant MAX_GET_MSG_SIZE    => 4096; # Messages larger than this size will be sent
+                                          # using a POST request. This feature requires
+                                          # SQS_VERSION 2007-05-01 or later.
                                        
 use overload '""' => \&_to_string;
 
@@ -27,10 +27,11 @@ sub new {
     my $secret_key = shift;
     
     my $self = {
-        AWSAccessKeyId => $access_key,
-        SecretKey => $secret_key,
-        Endpoint => +BASE_ENDPOINT,
+        AWSAccessKeyId   => $access_key,
+        SecretKey        => $secret_key,
+        Endpoint         => +BASE_ENDPOINT,
         SignatureVersion => 1,
+        _Version         => +DEFAULT_SQS_VERSION,
         @_,
     };
     if (!$self->{AWSAccessKeyId} || !$self->{SecretKey}) {
@@ -121,7 +122,7 @@ sub _dispatch {
     
     $params = {
         AWSAccessKeyId      => $self->{AWSAccessKeyId},
-        Version             => +SQS_VERSION,
+        Version             => $self->{_Version},
         %$params
     };
 
@@ -139,6 +140,8 @@ sub _dispatch {
     my $ua       = LWP::UserAgent->new();
     my $response;
 
+    $self->_debug_log($url);
+
     if ($post_request) {
         $response = $ua->post(
             $url, 
@@ -151,6 +154,7 @@ sub _dispatch {
     }
     
     if ($response->is_success) {
+        $self->_debug_log($response->content);
         my $href = XMLin($response->content, ForceArray => $force_array);
         return $href;
     }
@@ -178,6 +182,13 @@ sub timestamp {
         $min,
         $sec
     );
+}
+
+sub _debug_log {
+    my ($self, $msg) = @_;
+    return unless $self->{_Debug};
+    chomp($msg);
+    print {$self->{_Debug}} $msg . "\n\n";
 }
 
 sub _get_signed_url {

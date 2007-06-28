@@ -9,7 +9,10 @@ my $SecretKey       = $ENV{AWS_SECRET_KEY};
 
 use strict;
 
-my $sqs = new Amazon::SQS::Simple($AWSAccessKeyId, $SecretKey);
+my $sqs = new Amazon::SQS::Simple($AWSAccessKeyId, $SecretKey, 
+    _Version => '2006-04-01', 
+    _Debug   => *STDERR,
+);
 
 my $q = $sqs->CreateQueue('test-grants');
 
@@ -17,8 +20,8 @@ my $g = $q->ListGrants();
 print Dumper $g;
 print (('-' x 80) . "\n");
 
-my $permission = 'ReceiveMessage';
-my $id = 'a0bd3df56da83ac3a85f8ee85b006d9e43d82486e6197fdb07c6ecc58d08b794'; # sw@netcetera.org
+my $permission = shift || 'ReceiveMessage';
+my $id = '72fd6729f47aed5ccf146d6f39b29388bc4a5c1d03a7471ece8159bd49b7762a'; # sw@netcetera.org
 
 $q->AddGrant('sw@netcetera.org', $permission);
 
@@ -32,15 +35,15 @@ $g = $q->ListGrants();
 print Dumper $g;
 print (('-' x 80) . "\n");
 
-# $q->AddGrant($id, $permission, IdentifierType => 'ID');
-# 
-# $g = $q->ListGrants();
-# print Dumper $g;
-# print (('-' x 80) . "\n");
-# 
-# $q->RemoveGrant($id, $permission, IdentifierType => 'ID');
-# 
-# $g = $q->ListGrants();
-# print Dumper $g;
-# print (('-' x 80) . "\n");
+#$q->AddGrant($id, $permission, IdentifierType => 'ID');
+#
+#$g = $q->ListGrants();
+#print Dumper $g;
+#print (('-' x 80) . "\n");
+#
+#$q->RemoveGrant($id, $permission, IdentifierType => 'ID');
+#
+#$g = $q->ListGrants();
+#print Dumper $g;
+#print (('-' x 80) . "\n");
 
