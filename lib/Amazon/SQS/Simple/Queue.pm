@@ -29,9 +29,6 @@ sub ReceiveMessage {
     
     my $href = $self->_dispatch(\%params);
 
-    # return value will be single hashref, or ref array of
-    # hashrefs if NumberOfMessages was set and > 1
-    # Hashref has keys MessageBody and MessageId
     return $href->{Message};
 }
 
@@ -98,9 +95,6 @@ sub ListGrants {
     $params{Action} = 'ListGrants';
     
     my $href = $self->_dispatch(\%params, [ 'Grantee', 'GrantList' ]);
-
-    # use Data::Dumper;
-    # print STDERR Dumper $href;
 
     my $result;
     
@@ -185,6 +179,10 @@ more details.
 
 =over 2
 
+=item Endpoint()
+
+Get the endpoint for the queue.
+
 =item Delete($force, [%opts])
 
 Deletes the queue. If C<$force> is true, deletes the queue even if it
@@ -195,20 +193,34 @@ still contains messages.
 Sends the message. The message can be up to 256KB in size and should be
 plain text.
 
-=item ChangeMessageVisibility($message_id, $timeout, [%opts])
-
-Sets the timeout visibility of the message with the specified message ID
-to the specified timeout, in seconds.
-
-Note that the timeout counts from the time the method is called. So if
-retrieved a message 30 seconds ago that had a timeout of 600 seconds, and
-call ChangeMessageVisility with a new timeout of 300s, the visibility will
-timeout in 300s.
-
-
 =item ReceiveMessage([%opts])
 
 Get the next message from the queue.
+
+Returns a hashref, or an arrayref of hashrefs if NumberOfMessages option
+was set and greater than 1. Hashref keys are:
+
+=over 2
+
+=item MessageBody
+
+The message body
+
+=item MessageId
+
+An identifier for the message that is unique in this queue
+
+=back
+
+Options for ReceiveMessage:
+
+=over 2
+
+=item NumberOfMessages
+
+Number of messages to return
+
+=back
 
 =item DeleteMessage($message_id, [%opts])
 
@@ -218,6 +230,16 @@ Delete the message with the specified message ID from the queue
 
 Fetch the message with the specified message ID. Unlike C<ReceiveMessage>
 this doesn't affect the visibility of the message.
+
+=item ChangeMessageVisibility($message_id, $timeout, [%opts])
+
+Sets the timeout visibility of the message with the specified message ID
+to the specified timeout, in seconds.
+
+Note that the timeout counts from the time the method is called. So if
+retrieved a message 30 seconds ago that had a timeout of 600 seconds, and
+call ChangeMessageVisility with a new timeout of 300s, the visibility will
+timeout in 300s.
 
 =item GetAttributes([%opts])
 
@@ -238,10 +260,36 @@ attribute names are returned:
 Sets the value for a queue attribute. Currently the only valid
 attribute name is C<VisibilityTimeout>.
 
+=item AddGrant($identifier, $permission, [%opts])
+
+Adds the user identified by C<$identifier> to the list of grantees for the list,
+with the permissions specified by C<$permission>.
+
+C<$identifier> should be an email address of a person with an Amazon Web Services
+account. Alternatively, use a user ID in the format returned by ListGrants and add
+C<IdentifierType => 'ID'> to C<%opts>.
+
+C<$permission> must be one of C<ReceiveMessage>, C<SendMessage> or C<FullControl>.
+
+=item RemoveGrant($identifier, $permission, [%opts])
+
+Revokes the permissions specified by C<$permission> from the user identified by 
+C<$identifier> for the list.
+
+C<$identifier> should be an email address of a person with an Amazon Web Services
+account. Alternatively, use a user ID in the format returned by ListGrants and add
+C<IdentifierType => 'ID'> to C<%opts>.
+
+C<$permission> must be one of C<ReceiveMessage>, C<SendMessage> or C<FullControl>.
+
 =item ListGrants([%opts])
 
-List the grantees for this queue. Returns a reference to an array of hashrefs. 
-Each hashref has two keys:
+List the grantees for this queue. Returns a hashref mapping permission types
+to arrays of hashrefs identifying users.
+
+Permission types will be one of C<RECEIVEMESSAGE>, C<SENDMESSAGE> or C<FULLCONTROL>.
+
+The hashrefs identifying users have the following keys:
 
 =over 2
 
@@ -262,5 +310,7 @@ user can change over time.
 
 Copyright 2007 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
 
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
 =cut
 

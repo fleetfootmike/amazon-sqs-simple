@@ -35,15 +35,15 @@ $g = $q->ListGrants();
 print Dumper $g;
 print (('-' x 80) . "\n");
 
-#$q->AddGrant($id, $permission, IdentifierType => 'ID');
-#
-#$g = $q->ListGrants();
-#print Dumper $g;
-#print (('-' x 80) . "\n");
-#
-#$q->RemoveGrant($id, $permission, IdentifierType => 'ID');
-#
-#$g = $q->ListGrants();
-#print Dumper $g;
-#print (('-' x 80) . "\n");
+$q->AddGrant($id, $permission, IdentifierType => 'ID');
+
+$g = $q->ListGrants();
+print Dumper $g;
+print (('-' x 80) . "\n");
+
+$q->RemoveGrant($id, $permission, IdentifierType => 'ID');
+
+$g = $q->ListGrants();
+print Dumper $g;
+print (('-' x 80) . "\n");
 

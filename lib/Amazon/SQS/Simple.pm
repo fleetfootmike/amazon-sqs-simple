@@ -18,7 +18,7 @@ use constant MAX_GET_MSG_SIZE    => 4096; # Messages larger than this size will 
                                        
 use overload '""' => \&_to_string;
 
-our $VERSION   = '0.1';
+our $VERSION   = '0.2';
 our @EXPORT_OK = qw( timestamp );
 
 sub new {
@@ -94,20 +94,12 @@ sub ListQueues {
 }
 
 # Autoload accessors for object member variables
+# DON'T REMOVE! Endpoint() is documented in the
+# Amazon::SQS::Simple::Queue pod
 sub AUTOLOAD {
-    my ($self, $value) = @_;
-    
-    (my $method = $AUTOLOAD) =~ s/.*://;
-    
-    return unless defined $self->{$method};
-    
-    if (defined $value) {
-        $self->{$method} = $value;
-        return $self;
-    }
-    else {
-        return $self->{$method};
-    }
+    my ($self) = @_;
+    (my $method = $AUTOLOAD) =~ s/.*://;    
+    return $self->{$method};
 }
 
 # Explicitly define DESTROY so that it doesn't get autoloaded
@@ -264,9 +256,13 @@ Service.
 
 =over 2
 
-=item new($access_key, $secret_key, [%opts])
+=item new($access_key, $secret_key)
 
 Constructs a new Amazon::SQS::Simple object
+
+C<$access_key> is your Amazon Web Services access key. C<$secret_key> is your Amazon Web
+Services secret key. If you don't have either of these credentials, visit
+L<http://aws.amazon.com/>.
 
 =back
 
@@ -312,6 +308,11 @@ Only those queues whose name begins with the specified string are returned.
 =back
 
 =head1 FUNCTIONS
+
+No functions are exported by default; if you want to use them, export them in your use 
+line:
+
+    use Amazon::SQS::Simple qw( timestamp );
 
 =over 2
 
@@ -360,6 +361,9 @@ You generally do not need to supply this option.
 =head1 AUTHOR
 
 Copyright 2007 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
 
 =cut
 
