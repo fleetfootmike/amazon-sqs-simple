@@ -1,6 +1,8 @@
 bin/sqs-toolkit
 Changes
 lib/Amazon/SQS/Simple.pm
+lib/Amazon/SQS/Simple/Base.pm
+lib/Amazon/SQS/Simple/Message.pm
 lib/Amazon/SQS/Simple/Queue.pm
 LICENSE
 Makefile.PL

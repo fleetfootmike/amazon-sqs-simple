@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 16;
+use Test::More tests => 18;
 
 BEGIN {
     use_ok('Amazon::SQS::Simple');
@@ -59,18 +59,24 @@ ok(
 my $msg_id = $q->SendMessage($msg_small);
 ok ($msg_id, 'SendMessage (small message)');
 
-my $msg_href = $q->PeekMessage($msg_id);
+my $msg = $q->PeekMessage($msg_id);
 ok(
-    $msg_href->{MessageBody} eq $msg_small
+    UNIVERSAL::isa($msg, 'Amazon::SQS::Simple::Message')
+    , 'PeekMessage returns Amazon::SQS::Simple::Message object'
+);
+ok(
+    $msg->MessageBody() eq $msg_small
+    && $msg->MessageId() eq $msg_id
     , 'PeekMessage got right message back'
 );
 
 $msg_id = $q->SendMessage($msg_large);
 ok ($msg_id, 'SendMessage (large message)');
 
-$msg_href = $q->PeekMessage($msg_id);
+$msg = $q->PeekMessage($msg_id);
 ok(
-    $msg_href->{MessageBody} eq $msg_large
+    $msg->MessageBody() eq $msg_large
+    && $msg->MessageId() eq $msg_id
     , 'PeekMessage got right message back'
 );
 
@@ -84,10 +90,13 @@ eval {
 };
 ok(!$@, 'DeleteMessage');
 
-$msg_href = $q->ReceiveMessage();
+$msg = $q->ReceiveMessage();
 ok(
-    $msg_href
- && $msg_href->{MessageBody} eq $msg_small
+    UNIVERSAL::isa($msg, 'Amazon::SQS::Simple::Message')
+    , 'ReceiveMessage returns Amazon::SQS::Simple::Message object'
+);
+ok(
+    $msg->MessageBody() eq $msg_small
     , 'ReceiveMessage returned one of the messages we wrote'
 );
 

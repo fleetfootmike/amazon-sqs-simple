@@ -1,6 +1,13 @@
 package Amazon::SQS::Simple::Queue;
 
-use base 'Amazon::SQS::Simple';
+use Amazon::SQS::Simple::Message;
+
+use base 'Amazon::SQS::Simple::Base';
+
+sub Endpoint {
+    my $self = shift;
+    return $self->{Endpoint};
+}
 
 sub Delete {
     my $self = shift;
@@ -29,7 +36,7 @@ sub ReceiveMessage {
     
     my $href = $self->_dispatch(\%params);
 
-    return $href->{Message};
+    return new Amazon::SQS::Simple::Message($href->{Message});
 }
 
 sub DeleteMessage {
@@ -49,7 +56,7 @@ sub PeekMessage {
     
     my $href = $self->_dispatch(\%params);
     
-    return $href->{Message};
+    return new Amazon::SQS::Simple::Message($href->{Message});
 }
 
 sub ChangeMessageVisibility {
@@ -197,20 +204,8 @@ plain text.
 
 Get the next message from the queue.
 
-Returns a hashref, or an arrayref of hashrefs if NumberOfMessages option
-was set and greater than 1. Hashref keys are:
-
-=over 2
-
-=item MessageBody
-
-The message body
-
-=item MessageId
-
-An identifier for the message that is unique in this queue
-
-=back
+Returns an C<Amazon::SQS::Simple::Message> object. See 
+L<Amazon::SQS::Simple::Message> for more details.
 
 Options for ReceiveMessage:
 
@@ -230,6 +225,9 @@ Delete the message with the specified message ID from the queue
 
 Fetch the message with the specified message ID. Unlike C<ReceiveMessage>
 this doesn't affect the visibility of the message.
+
+Returns an C<Amazon::SQS::Simple::Message> object. See 
+L<Amazon::SQS::Simple::Message> for more details.
 
 =item ChangeMessageVisibility($message_id, $timeout, [%opts])
 
@@ -312,5 +310,5 @@ Copyright 2007 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
-=cut
 
+=cut
