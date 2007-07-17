@@ -10,8 +10,8 @@ my $SecretKey       = $ENV{AWS_SECRET_KEY};
 use strict;
 
 my $sqs = new Amazon::SQS::Simple($AWSAccessKeyId, $SecretKey, 
-    _Version => '2006-04-01', 
-    _Debug   => *STDERR,
+    # _Version => '2006-04-01', 
+    # _Debug   => *STDERR,
 );
 
 my $q = $sqs->CreateQueue('test-grants');

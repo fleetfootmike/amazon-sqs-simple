@@ -5,10 +5,22 @@ use Getopt::Long;
 use Amazon::SQS::Simple;
 
 my %opts;
-GetOptions(\%opts, 'reset', 'timeout=i', 'help', 'delete', 'create', 'force', 'info', 'access-key', 'secret-key');
+GetOptions(
+    \%opts, 
+    'reset', 
+    'timeout=i',
+    'help',
+    'delete',
+    'create',
+    'force',
+    'info',
+    'access-key',
+    'secret-key',
+    'list-queues',
+);
 
 my $scr             = basename($0);
-my $queue_name      = shift or usage(1);
+my $queue_name      = shift;
 
 my $AWSAccessKeyId  = $opts{'access-key'} || $ENV{AWS_ACCESS_KEY}; 
 my $SecretKey       = $opts{'secret-key'} || $ENV{AWS_SECRET_KEY};
@@ -19,7 +31,11 @@ usage(1) if @ARGV;
 sub usage {
     my $status = shift || 0;
     print <<USAGE;
-Usage: $scr [OPTIONS] queue-name
+sqs-toolkit: Swiss army knife for Amazon Simple Queue Service
+
+Usage: 
+    $scr [OPTIONS] queue-name
+    $scr list-queues 
 
 OPTIONS:
     --reset
@@ -60,6 +76,17 @@ USAGE
 use strict;
 
 my $sqs = new Amazon::SQS::Simple($AWSAccessKeyId, $SecretKey);
+
+if ($opts{'list-queues'}) {
+    my $queues = $sqs->ListQueues;
+    foreach my $q(sort { $a->Endpoint cmp $b->Endpoint } @$queues) {
+        (my $name = $q->Endpoint) =~ s|.*/||;
+        print "$name (Endpoint: " . $q->Endpoint . ")\n";
+    }
+    exit(0);
+}
+
+usage(1) unless $queue_name;
 
 my $q;
 q_create();
