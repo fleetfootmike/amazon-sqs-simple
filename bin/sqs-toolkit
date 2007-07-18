@@ -154,7 +154,7 @@ sub q_reset {
     my $queue = shift;
     my $t = q_timeout($queue);
     q_delete($queue, 1);
-    q_create($queue);
+    q_create($queue_name);
     q_timeout($queue, $t);
 }
 
