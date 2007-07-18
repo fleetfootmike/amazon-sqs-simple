@@ -8,13 +8,13 @@ my %opts;
 GetOptions(
     \%opts, 
     'reset', 
-    'timeout=i',
-    'help',
-    'delete',
-    'create',
-    'force',
-    'info',
-    'access-key',
+    'timeout=i', 
+    'help', 
+    'delete', 
+    'create', 
+    'force', 
+    'info', 
+    'access-key', 
     'secret-key',
     'list-queues',
 );
@@ -31,11 +31,9 @@ usage(1) if @ARGV;
 sub usage {
     my $status = shift || 0;
     print <<USAGE;
-sqs-toolkit: Swiss army knife for Amazon Simple Queue Service
-
 Usage: 
+    $scr --list-queues
     $scr [OPTIONS] queue-name
-    $scr list-queues 
 
 OPTIONS:
     --reset
@@ -76,71 +74,99 @@ USAGE
 use strict;
 
 my $sqs = new Amazon::SQS::Simple($AWSAccessKeyId, $SecretKey);
+my $q;
 
 if ($opts{'list-queues'}) {
-    my $queues = $sqs->ListQueues;
-    foreach my $q(sort { $a->Endpoint cmp $b->Endpoint } @$queues) {
-        (my $name = $q->Endpoint) =~ s|.*/||;
-        print "$name (Endpoint: " . $q->Endpoint . ")\n";
+    my $queues = $sqs->ListQueues();
+    if ($queues) {
+        foreach my $queue (@$queues) {
+            (my $name = $queue->Endpoint()) =~ s|.*/||;
+            printf ("%s (Endpoint: %s)\n", $name, $queue->Endpoint());
+        }
+    }
+    else {
+        print "You don't have any queues (use --create to create one)"
     }
     exit(0);
 }
 
 usage(1) unless $queue_name;
 
-my $q;
-q_create();
+if ($opts{create}) {
+    $q = q_create($queue_name);
+}
+else {
+    $q = q_find($queue_name);
+}
 
 if ($opts{timeout}) {
-    q_timeout($opts{timeout});
+    q_timeout($q, $opts{timeout});
 }
 
 if ($opts{info}) {
-    q_info();
+    q_info($q);
 }
 
 if ($opts{reset}) {
-    q_reset();
+    q_reset($q);
 }
 
 if ($opts{delete}) {
-    q_delete($opts{force});
+    q_delete($q, $opts{force});
+}
+
+sub q_find {
+    my $name = shift;
+    my $queues = $sqs->ListQueues(QueueNamePrefix => $name);
+    if ($queues) {
+        my @matches = grep { $_->Endpoint() =~ m|/$name$|} @$queues;
+        if (@matches > 1) {
+            warn "[WARNING] Multiple queues found with name $name\n";
+        }
+        if (@matches) {
+            return $matches[0];
+        }
+    }
+    die "No queue called $name found (try using --list-queues)\n";
 }
 
 sub q_create {
-    $q = $sqs->CreateQueue($queue_name);
+    my $name = shift;
+    $sqs->CreateQueue($name);
 }
 
 sub q_delete {
+    my $queue = shift;
     my $force = shift;
-    my $href = $q->Delete($force);
+    my $href = $queue->Delete($force);
 }
 
 sub q_info {
-    print "Endpoint: $q\nAttributes:\n";
-    my $attrs = $q->GetAttributes();
+    my $queue = shift;
+    print "Endpoint: $queue\nAttributes:\n";
+    my $attrs = $queue->GetAttributes();
     for (keys %$attrs) {
         print "$_ => $attrs->{$_}\n";
     }
 }
 
 sub q_reset {
-    my $t = q_timeout();
-    q_delete(1);
-    q_create();
-    q_timeout($t);
+    my $queue = shift;
+    my $t = q_timeout($queue);
+    q_delete($queue, 1);
+    q_create($queue);
+    q_timeout($queue, $t);
 }
 
 sub q_timeout {
+    my $queue = shift;
     my $t = shift;
 
     if (defined $t) { 
-        $q->SetAttribute('VisibilityTimeout', $t);
+        $queue->SetAttribute('VisibilityTimeout', $t);
     }
     else {
-        my $href = $q->GetAttributes();
+        my $href = $queue->GetAttributes();
         return $href->{VisibilityTimeout};
     }
 }
-
-
