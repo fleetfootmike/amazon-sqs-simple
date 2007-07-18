@@ -172,9 +172,9 @@ the Amazon Simple Queue Service.
 
     my $msg = $q->ReceiveMessage();
 
-    print $msg->{MessageBody} # Hello world!
+    print $msg->MessageBody() # Hello world!
 
-    $q->DeleteMessage($msg->{MessageId});
+    $q->DeleteMessage($msg->MessageId());
 
 =head1 INTRODUCTION
 

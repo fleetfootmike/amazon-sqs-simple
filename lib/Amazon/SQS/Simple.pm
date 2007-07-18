@@ -92,10 +92,10 @@ Service
 
     # Retrieve a message
     my $msg = $q->ReceiveMessage();
-    print $msg->{MessageBody} # Hello world!
+    print $msg->MessageBody() # Hello world!
 
     # Delete the message
-    $q->DeleteMessage($msg->{MessageId});
+    $q->DeleteMessage($msg->MessageId());
 
     # Delete the queue
     $q->Delete();
