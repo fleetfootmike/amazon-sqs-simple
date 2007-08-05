@@ -186,21 +186,21 @@ more details.
 
 =over 2
 
-=item Endpoint()
+=item B<Endpoint()>
 
 Get the endpoint for the queue.
 
-=item Delete($force, [%opts])
+=item B<Delete($force, [%opts])>
 
 Deletes the queue. If C<$force> is true, deletes the queue even if it
 still contains messages.
 
-=item SendMessage($message, [%opts])
+=item B<SendMessage($message, [%opts])>
 
 Sends the message. The message can be up to 256KB in size and should be
 plain text.
 
-=item ReceiveMessage([%opts])
+=item B<ReceiveMessage([%opts])>
 
 Get the next message from the queue.
 
@@ -209,19 +209,19 @@ L<Amazon::SQS::Simple::Message> for more details.
 
 Options for ReceiveMessage:
 
-=over 2
+=over 4
 
-=item NumberOfMessages
+=item * NumberOfMessages => NUMBER
 
 Number of messages to return
 
 =back
 
-=item DeleteMessage($message_id, [%opts])
+=item B<DeleteMessage($message_id, [%opts])>
 
 Delete the message with the specified message ID from the queue
 
-=item PeekMessage($message_id, [%opts])
+=item B<PeekMessage($message_id, [%opts])>
 
 Fetch the message with the specified message ID. Unlike C<ReceiveMessage>
 this doesn't affect the visibility of the message.
@@ -229,7 +229,7 @@ this doesn't affect the visibility of the message.
 Returns an C<Amazon::SQS::Simple::Message> object. See 
 L<Amazon::SQS::Simple::Message> for more details.
 
-=item ChangeMessageVisibility($message_id, $timeout, [%opts])
+=item B<ChangeMessageVisibility($message_id, $timeout, [%opts])>
 
 Sets the timeout visibility of the message with the specified message ID
 to the specified timeout, in seconds.
@@ -239,26 +239,26 @@ retrieved a message 30 seconds ago that had a timeout of 600 seconds, and
 call ChangeMessageVisility with a new timeout of 300s, the visibility will
 timeout in 300s.
 
-=item GetAttributes([%opts])
+=item B<GetAttributes([%opts])>
 
 Get the attributes for the queue. Returns a reference to a hash
 mapping attribute names to their values. Currently the following
 attribute names are returned:
 
-=over
+=over 4
 
-=item VisibilityTimeout
+=item * VisibilityTimeout
 
-=item ApproximateNumberOfMessages
+=item * ApproximateNumberOfMessages
 
 =back
 
-=item SetAttribute($attribute_name, $attribute_value, [%opts])
+=item B<SetAttribute($attribute_name, $attribute_value, [%opts])>
 
 Sets the value for a queue attribute. Currently the only valid
 attribute name is C<VisibilityTimeout>.
 
-=item AddGrant($identifier, $permission, [%opts])
+=item B<AddGrant($identifier, $permission, [%opts])>
 
 Adds the user identified by C<$identifier> to the list of grantees for the list,
 with the permissions specified by C<$permission>.
@@ -269,7 +269,7 @@ C<IdentifierType => 'ID'> to C<%opts>.
 
 C<$permission> must be one of C<ReceiveMessage>, C<SendMessage> or C<FullControl>.
 
-=item RemoveGrant($identifier, $permission, [%opts])
+=item B<RemoveGrant($identifier, $permission, [%opts])>
 
 Revokes the permissions specified by C<$permission> from the user identified by 
 C<$identifier> for the list.
@@ -280,7 +280,7 @@ C<IdentifierType => 'ID'> to C<%opts>.
 
 C<$permission> must be one of C<ReceiveMessage>, C<SendMessage> or C<FullControl>.
 
-=item ListGrants([%opts])
+=item B<ListGrants([%opts])>
 
 List the grantees for this queue. Returns a hashref mapping permission types
 to arrays of hashrefs identifying users.
@@ -289,13 +289,13 @@ Permission types will be one of C<RECEIVEMESSAGE>, C<SENDMESSAGE> or C<FULLCONTR
 
 The hashrefs identifying users have the following keys:
 
-=over 2
+=over 4
 
-=item ID
+=item * ID
 
 A unique identifier for the user
 
-=item DisplayName
+=item * DisplayName
 
 The user's display name, as registered on Amazon.com. The display name for a
 user can change over time.

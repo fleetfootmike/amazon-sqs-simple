@@ -135,7 +135,7 @@ C<Amazon::SQS::Simple::Queue> object. (See L<Amazon::SQS::Simple::Queue> for det
 
 Options for CreateQueue:
 
-=over 2
+=over 4
 
 =item DefaultVisibilityTimeout => SECONDS
 
@@ -150,7 +150,7 @@ C<Amazon::SQS::Simple::Queue> objects. (See L<Amazon::SQS::Simple::Queue> for de
 
 Options for ListQueues:
 
-=over 2
+=over 4
 
 =item QueueNamePrefix => STRING
 

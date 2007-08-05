@@ -34,11 +34,11 @@ See L<Amazon::SQS::Simple::Queue> for more details.
 
 =over 2
 
-=item MessageBody()
+=item B<MessageBody()>
 
 Get the message body.
 
-=item MessageId()
+=item B<MessageId()>
 
 Get the message unique identifier
 
