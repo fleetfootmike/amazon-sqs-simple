@@ -11,3 +11,7 @@ Revision history for Amazon-SQS-Simple
 
 0.04    17 July 2007
         Mended POD docs in Base and Message classes
+
+0.05    06 August 2007
+        Fixed bug in Queue.pm where RetrieveMessage could attempt to
+        bless a null reference.
