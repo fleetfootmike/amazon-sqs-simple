@@ -36,7 +36,12 @@ sub ReceiveMessage {
     
     my $href = $self->_dispatch(\%params);
 
-    return new Amazon::SQS::Simple::Message($href->{Message});
+    my $msg;
+
+    if (defined $href->{Message}) {
+        $msg = new Amazon::SQS::Simple::Message($href->{Message});
+    }
+    return $msg;
 }
 
 sub DeleteMessage {

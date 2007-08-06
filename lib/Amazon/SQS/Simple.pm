@@ -10,7 +10,7 @@ use XML::Simple;
 
 use base qw(Exporter Amazon::SQS::Simple::Base);
 
-our $VERSION   = '0.4';
+our $VERSION   = '0.5';
 our @EXPORT_OK = qw( timestamp );
 
 sub GetQueue {
