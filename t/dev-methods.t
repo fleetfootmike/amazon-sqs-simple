@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 18;
+use Test::More tests => 19;
 
 BEGIN {
     use_ok('Amazon::SQS::Simple');
@@ -15,6 +15,7 @@ isa_ok($sqs, 'Amazon::SQS::Simple', "[$$] Amazon::SQS::Simple object created suc
 my $queue_name = "_test_queue_$$";
 my $msg_small  = "Some random message"; # small message, will be sent using GET
 my $msg_large  = "x" x (1024*16);       # 16K message, will be sent using POST
+my ($msg, $href);
 
 my $q = $sqs->CreateQueue($queue_name);
 ok(
@@ -28,6 +29,12 @@ my $q2 = $sqs->GetQueue($q->Endpoint());
 
 is_deeply($q, $q2, 'GetQueue returns the queue we just created');
 
+$msg = $q->ReceiveMessage();
+ok(
+    !defined($msg)
+    , 'ReceiveMessage called on empty queue returns undef'
+);
+
 my $lists = $sqs->ListQueues();
 ok(
     (grep { $_->Endpoint() eq $q->Endpoint() } @$lists)
@@ -40,8 +47,6 @@ eval {
     $q->SetAttribute('VisibilityTimeout', $timeout);
 };
 ok(!$@, 'SetAttribute');
-
-my $href;
 
 # Have a few at GetAttributes, sometimes takes a while for SetAttributes
 # method to be processed
@@ -59,7 +64,7 @@ ok(
 my $msg_id = $q->SendMessage($msg_small);
 ok ($msg_id, 'SendMessage (small message)');
 
-my $msg = $q->PeekMessage($msg_id);
+$msg = $q->PeekMessage($msg_id);
 ok(
     UNIVERSAL::isa($msg, 'Amazon::SQS::Simple::Message')
     , 'PeekMessage returns Amazon::SQS::Simple::Message object'
