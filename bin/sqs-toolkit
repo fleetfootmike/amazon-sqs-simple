@@ -7,7 +7,7 @@ use Amazon::SQS::Simple;
 my %opts;
 GetOptions(
     \%opts, 
-    'reset', 
+    'flush', 
     'timeout=i', 
     'help', 
     'delete', 
@@ -17,6 +17,7 @@ GetOptions(
     'access-key', 
     'secret-key',
     'list-queues',
+    'verbose',
 );
 
 my $scr             = basename($0);
@@ -36,8 +37,8 @@ Usage:
     $scr [OPTIONS] queue-name
 
 OPTIONS:
-    --reset
-        remove all messages from queue
+    --flush
+        remove all visible messages from queue
 
     --timeout=SECS
         set the queue's default visibility timeout in seconds
@@ -107,8 +108,8 @@ if ($opts{info}) {
     q_info($q);
 }
 
-if ($opts{reset}) {
-    q_reset($q);
+if ($opts{flush}) {
+    q_flush($q);
 }
 
 if ($opts{delete}) {
@@ -150,12 +151,14 @@ sub q_info {
     }
 }
 
-sub q_reset {
+sub q_flush {
     my $queue = shift;
-    my $t = q_timeout($queue);
-    q_delete($queue, 1);
-    q_create($queue_name);
-    q_timeout($queue, $t);
+    while (my $msg = $queue->ReceiveMessage()) {
+        if ($opts{verbose}) {
+            print "Deleteing " . $msg->MessageId() . "\n";
+        }
+        $queue->DeleteMessage($msg->MessageId());
+    }
 }
 
 sub q_timeout {

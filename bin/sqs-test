@@ -5,6 +5,8 @@ use Getopt::Long;
 use Amazon::SQS::Simple;
 use Time::HiRes qw(time);
 
+$| = 1;
+
 my %opts;
 GetOptions(\%opts, 'reset', 'help', 'delete-queues');
 
@@ -27,84 +29,53 @@ sub usage {
 use strict;
 
 my $sqs = new Amazon::SQS::Simple($AWSAccessKeyId, $SecretKey);
-
-my $queues = $sqs->ListQueues();
-die "No queues found!" unless defined $queues;
-
-print "Your queues:\n";
-for (@$queues) { print "$_\n" };
-
-my $q = $sqs->CreateQueue('prio_1');
-# my $q = $queues->[0];
-
-$q->SetAttribute('VisibilityTimeout', 10);
-
-print '=' x 80 . "\n";
-print "Attributes for $q:\n";
-my $attrs = $q->GetAttributes();
-for (keys %$attrs) {
-    print "$_: $attrs->{$_}\n";
-}
-print '=' x 80 . "\n";
-
+my $q   = $sqs->CreateQueue("$scr-$$");
 print "Using Queue: $q\n";
 
-if ($opts{reset}) {
-    printlog("Resetting the queue");
-    while(defined(my $msg = $q->ReceiveMessage())) {
-        my ($ppid, $id) = split(/:/, $msg->{MessageBody});
-        printlog("Deleting message $id");
-        $q->DeleteMessage($msg->{MessageId});
+my $pid = fork();
+
+die "Tried to fork, it didn't work: $!" unless defined($pid);
+
+if ($pid) {
+    # PRODUCER
+    for my $id (1..$max_messages) {
+        printlog("Sending $id");
+    
+        # pad message to c. 8K
+        my $msg = sprintf("$$:%i:%08000i", $id, 0);
+        my $message_id = $q->SendMessage($msg);
+        printlog("Sent message ID: $message_id");
     }
-    $q->Delete() if $opts{'delete-queues'};
+    wait();
 }
 else {
-    my $pid = fork();
+    # CONSUMER
+    my $count = 0;
+    my $requests = 0;
 
-    die "Tried to fork, it didn't work: $!" unless defined($pid);
-
-    if ($pid) {
-        # I'm the daddy!
-        # PRODUCER
-        for my $id (1..$max_messages) {
-            printlog("Sending $id");
-        
-            # pad message to c. 8K
-            my $msg = sprintf("$$:%i:%08000i", $id, 0);
-            $q->SendMessage($msg);
+    REQUEST: while ($count < $max_messages) {
+        $requests++;
+        my $start = time;
+        my $msg = $q->ReceiveMessage(VisibilityTimeout => 5);
+        my $t_receive = time - $start;
+        if (defined $msg) { 
+            $count++;
+            my ($ppid, $id) = split(/:/, $msg->{MessageBody});
+            printlog(sprintf("Received message %s [%i/%i] in %0.3fs", $id, $count, $max_messages, $t_receive));
+            printlog("Received message ID: " . $msg->{MessageId});
+            $q->DeleteMessage($msg->{MessageId});            
         }
-        wait();
-    }
-    else {
-        #exit();
-        # child process
-        # CONSUMER
-        my $count = 0;
-        my $requests = 0;
+        else {
+            printlog('Nothing to receive');
+        }
     
-        REQUEST: while ($count < $max_messages) {
-            $requests++;
-            my $start = time;
-            my $msg = $q->ReceiveMessage({VisibilityTimeout => 5});
-            my $t_receive = time - $start;
-            if (defined $msg) { 
-                $count++;
-                my ($ppid, $id) = split(/:/, $msg->{MessageBody});
-                printlog(sprintf("Received message %s [%i/%i] in %0.3fs", $id, $count, $max_messages, $t_receive));
-                $q->DeleteMessage($msg->{MessageId});            
-            }
-            else {
-                printlog('Nothing to receive');
-            }
-        
-            if ($requests >= $max_messages * 10) {
-                printlog("$requests requests sent, quitting consumer loop");
-                last REQUEST;
-            }
+        if ($requests >= $max_messages * 10) {
+            printlog("$requests requests sent, quitting consumer loop");
+            last REQUEST;
         }
     }
-    exit(0);
 }
+exit(0);
 
 sub printlog {
     my $msg = shift;
