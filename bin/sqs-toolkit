@@ -60,6 +60,9 @@ OPTIONS:
     --help
         show this help documentation
 
+    --verbose
+        make output of some operations more verbose
+
     --access-key=KEY
         Your AWS access key (or set AWS_ACCESS_KEY env 
         variable)
@@ -155,7 +158,7 @@ sub q_flush {
     my $queue = shift;
     while (my $msg = $queue->ReceiveMessage()) {
         if ($opts{verbose}) {
-            print "Deleteing " . $msg->MessageId() . "\n";
+            print "Deleting " . $msg->MessageId() . "\n";
         }
         $queue->DeleteMessage($msg->MessageId());
     }
