@@ -5,8 +5,8 @@ use CGI;
 
 use strict;
 
-my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
-my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
+my $AWSAccessKeyId  = ''; 
+my $SecretKey       = '';
 
 my $cgi = new CGI;
 my $sqs = new Amazon::SQS::Simple($AWSAccessKeyId, $SecretKey);

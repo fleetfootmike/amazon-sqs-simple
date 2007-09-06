@@ -15,8 +15,8 @@ my $padding_length  = 60000;
 my $help            = 0;
 my $scr             = basename($0);
 my $logfile         = "/var/tmp/$scr.log";
-my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
-my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
+my $AWSAccessKeyId  = $ENV{AWS_ACCESS_KEY};
+my $SecretKey       = $ENV{AWS_SECRET_KEY};
 my ($q, $msg, @kids);
 
 GetOptions(

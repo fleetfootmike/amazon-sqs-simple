@@ -1,12 +1,7 @@
 package Amazon::SQS::Simple;
 
 use Carp qw( croak );
-use Digest::HMAC_SHA1;
-use LWP::UserAgent;
-use MIME::Base64;
 use Amazon::SQS::Simple::Queue;
-use URI::Escape;
-use XML::Simple;
 
 use base qw(Exporter Amazon::SQS::Simple::Base);
 

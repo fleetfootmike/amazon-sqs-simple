@@ -14,8 +14,8 @@ my $scr             = basename($0);
 my $max_messages    = shift || 10;
 my $base_time       = time();
 
-my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
-my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
+my $AWSAccessKeyId  = $ENV{AWS_ACCESS_KEY};
+my $SecretKey       = $ENV{AWS_SECRET_KEY};
 
 usage(0) if ($opts{help});
 usage(1) if @ARGV || $max_messages =~ /\D/;
