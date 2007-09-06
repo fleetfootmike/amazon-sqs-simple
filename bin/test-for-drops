@@ -1,0 +1,63 @@
+#!/usr/bin/perl -w
+
+use File::Basename;
+use Amazon::SQS::Simple;
+use strict;
+
+$| = 1;
+
+my $scr             = basename($0);
+my $max_messages    = shift || 10;
+
+my $AWSAccessKeyId  = '0QJGP26J6TDAM7FF06G2'; # rtip-scrum@amazon.com
+my $SecretKey       = '3a5P6Sz4LDqUlidEHBdebpBPWx9Ck//Cifh6Bsnc';
+
+my $sqs = new Amazon::SQS::Simple(
+    $AWSAccessKeyId,
+    $SecretKey,
+    # _Debug => \*STDERR, # for debugging info, uncomment and run as test-for-drops 2>debug.log
+);
+my $q   = $sqs->CreateQueue("$scr-$$");
+print "Using Queue: $q\n";
+
+my %message_ids;
+
+for my $body (1..$max_messages) {
+    my ($message_id) = split /\|/, $q->SendMessage($body);
+    print("Sent $body, message ID $message_id\n");
+    $message_ids{$message_id}++;
+}
+
+my $count = 0;
+my $requests = 0;
+
+while ($count < $max_messages && $requests < $max_messages * 4) {
+    $requests++;
+    my $msg = $q->ReceiveMessage();
+    
+    if (defined $msg) { 
+        $count++;
+        my $body = $msg->MessageBody();
+        my ($id) = split /\|/, $msg->MessageId();
+
+        print("Received $body, message ID $id\n");
+
+        if (exists $message_ids{$id}) {
+            $message_ids{$id}--;
+        } else {
+            print("ERROR $id retrieved but never sent\n");
+        }
+        
+        $q->DeleteMessage($msg->MessageId);            
+    }
+}
+
+for (sort keys %message_ids) {
+    next unless $message_ids{$_};
+
+    if ($message_ids{$_} > 0) {
+        print("ERROR: $_ sent but never received\n");
+    } elsif ($message_ids{$_} < 0) {
+        print("WARN: $_ received more than once\n");
+    }
+}

@@ -95,7 +95,7 @@ sub _dispatch {
         my $error = "ERROR: On calling $params->{Action}: " . $response->status_line;
         $error .= " ($msg)" if $msg;
         $error .= "\n";
-        die $error;
+        croak $error;
     }
 }
 
