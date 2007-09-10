@@ -23,9 +23,17 @@ print "Using Queue: $q\n";
 my %message_ids;
 
 for my $body (1..$max_messages) {
-    my ($message_id) = split /\|/, $q->SendMessage($body);
-    print("Sent $body, message ID $message_id\n");
-    $message_ids{$message_id}++;
+    my $message_id;
+    eval {
+        ($message_id) = split /\|/, $q->SendMessage($body);
+    };
+
+    if ($@) {
+        print STDERR "Error on calling SendMessage: $@";
+    } else {
+        print("Sent $body, message ID $message_id\n");
+        $message_ids{$message_id}++;
+    }
 }
 
 my $count = 0;
@@ -33,9 +41,15 @@ my $requests = 0;
 
 while ($count < $max_messages && $requests < $max_messages * 4) {
     $requests++;
-    my $msg = $q->ReceiveMessage();
+    my $msg;
     
-    if (defined $msg) { 
+    eval {
+        $msg = $q->ReceiveMessage();
+    };
+
+    if ($@) {
+        print STDERR "Error on calling ReceiveMessage: $@";
+    } elsif (defined $msg) { 
         $count++;
         my $body = $msg->MessageBody();
         my ($id) = split /\|/, $msg->MessageId();
@@ -48,7 +62,12 @@ while ($count < $max_messages && $requests < $max_messages * 4) {
             print("ERROR $id retrieved but never sent\n");
         }
         
-        $q->DeleteMessage($msg->MessageId);            
+        eval {
+            $q->DeleteMessage($msg->MessageId);
+        };
+        if ($@) {
+            print STDERR "Error on calling DeleteMessage: $@";
+        }
     }
 }
 
