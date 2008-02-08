@@ -1,6 +1,6 @@
 package Amazon::SQS::Simple::Base;
 
-use Carp qw( croak );
+use Carp qw( croak carp );
 use Digest::HMAC_SHA1;
 use LWP::UserAgent;
 use MIME::Base64;
@@ -9,7 +9,7 @@ use XML::Simple;
 
 use base qw(Exporter);
 
-use constant DEFAULT_SQS_VERSION => '2007-05-01';
+use constant DEFAULT_SQS_VERSION => '2008-01-01';
 use constant BASE_ENDPOINT       => 'http://queue.amazonaws.com';
 use constant MAX_GET_MSG_SIZE    => 4096; # Messages larger than this size will be sent
                                           # using a POST request. This feature requires
@@ -46,7 +46,10 @@ sub _dispatch {
     my $params       = shift || {};
     my $force_array  = shift || [];
     my $post_request = 0;
-    my $msg; # only used for POST requests
+    my $ua           = LWP::UserAgent->new();
+    my $url          = $self->{Endpoint};
+    my $response;
+    my $post_body;
     
     $params = {
         AWSAccessKeyId      => $self->{AWSAccessKeyId},
@@ -59,28 +62,24 @@ sub _dispatch {
     }
     
     if ($params->{MessageBody} && length($params->{MessageBody}) > +MAX_GET_MSG_SIZE) {
-        $msg = $params->{MessageBody};
-        delete($params->{MessageBody});
         $post_request = 1;
     }
 
-    my $url      = $self->_get_signed_url($params);
-    my $ua       = LWP::UserAgent->new();
-    my $response;
+    my $query = $self->_get_signed_query($params);
 
-    $self->_debug_log($url);
+    $self->_debug_log($query);
 
     if ($post_request) {
         $response = $ua->post(
             $url, 
-            'Content-type' => 'text/plain', 
-            'Content'      => $msg
+            'Content-type' => 'application/x-www-form-urlencoded', 
+            'Content'      => $query
         );
     }
     else {
-        $response = $ua->get($url);
+        $response = $ua->get("$url/?$query");
     }
-    
+        
     if ($response->is_success) {
         $self->_debug_log($response->content);
         my $href = XMLin($response->content, ForceArray => $force_array);
@@ -92,9 +91,9 @@ sub _dispatch {
             my $href = XMLin($response->content);
             $msg = $href->{Errors}{Error}{Message};
         };
+        
         my $error = "ERROR: On calling $params->{Action}: " . $response->status_line;
         $error .= " ($msg)" if $msg;
-        $error .= "\n";
         croak $error;
     }
 }
@@ -106,7 +105,7 @@ sub _debug_log {
     print {$self->{_Debug}} $msg . "\n\n";
 }
 
-sub _get_signed_url {
+sub _get_signed_query {
     my ($self, $params) = @_;
     my $sig = '';
     
@@ -118,8 +117,7 @@ sub _get_signed_url {
                 $sig = $sig . $key . $params->{$key};
             }
         }
-    }
-    else {
+    } else {
         $sig = $params->{Action} . $params->{Timestamp};
     }
 
@@ -130,9 +128,8 @@ sub _get_signed_url {
     $params->{Signature}   = uri_escape(encode_base64($hmac->digest, ''));
     $params->{MessageBody} = uri_escape($params->{MessageBody}) if $params->{MessageBody};
     
-    my $url = $self->{Endpoint} . '/?' . join('&', map { $_ . '=' . $params->{$_} } keys %$params);
-    
-    return $url;
+    my $query = join('&', map { $_ . '=' . $params->{$_} } keys %$params);
+    return $query;
 }
 
 sub _timestamp {

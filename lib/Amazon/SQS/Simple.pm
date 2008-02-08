@@ -5,7 +5,7 @@ use Amazon::SQS::Simple::Queue;
 
 use base qw(Exporter Amazon::SQS::Simple::Base);
 
-our $VERSION   = '0.5';
+our $VERSION   = '0.6';
 our @EXPORT_OK = qw( timestamp );
 
 sub GetQueue {
@@ -24,14 +24,11 @@ sub CreateQueue {
         
     my $href = $self->_dispatch(\%params);
     
-    if ($href->{QueueUrl}) {
+    if ($href->{CreateQueueResult}{QueueUrl}) {
         return Amazon::SQS::Simple::Queue->new(
             %$self,
-            Endpoint => $href->{QueueUrl},
+            Endpoint => $href->{CreateQueueResult}{QueueUrl},
         );
-    }
-    else {
-        croak("Failed to create a queue: " . $response->status_line);
     }
 }
 
@@ -42,13 +39,14 @@ sub ListQueues {
         
     my $href = $self->_dispatch(\%params, ['QueueUrl']);
     
-    if ($href->{QueueUrl}) {
+    if ($href->{ListQueuesResult}{QueueUrl}) {
         my @result = map {
             new Amazon::SQS::Simple::Queue(
                 %$self,
                 Endpoint => $_,
             )        
-        } @{$href->{QueueUrl}};
+        } @{$href->{ListQueuesResult}{QueueUrl}};
+
         return \@result;
     }
     else {

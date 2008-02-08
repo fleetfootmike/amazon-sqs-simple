@@ -1,6 +1,7 @@
 package Amazon::SQS::Simple::Queue;
 
 use Amazon::SQS::Simple::Message;
+use Amazon::SQS::Simple::SendResponse;
 
 use base 'Amazon::SQS::Simple::Base';
 
@@ -11,9 +12,7 @@ sub Endpoint {
 
 sub Delete {
     my $self = shift;
-    my $force = shift;
     my $params = { Action => 'DeleteQueue' };
-    $params->{ForceDeletion} = 'true' if $force;
     
     my $href = $self->_dispatch($params);    
 }
@@ -26,7 +25,9 @@ sub SendMessage {
     
     my $href = $self->_dispatch(\%params);    
     
-    return $href->{MessageId};
+    return new Amazon::SQS::Simple::SendResponse(
+        $href->{SendMessageResult}
+    );
 }
 
 sub ReceiveMessage {
@@ -36,121 +37,51 @@ sub ReceiveMessage {
     
     my $href = $self->_dispatch(\%params);
 
-    my $msg;
-
-    if (defined $href->{Message}) {
-        $msg = new Amazon::SQS::Simple::Message($href->{Message});
+    my $msg = undef;
+    
+    if (defined $href->{ReceiveMessageResult}{Message}) {
+        $msg = new Amazon::SQS::Simple::Message(
+            $href->{ReceiveMessageResult}{Message}
+        );
     }
     return $msg;
 }
 
 sub DeleteMessage {
-    my ($self, $message_id, %params) = @_;
+    my ($self, $receipt_handle, %params) = @_;
     
     $params{Action} = 'DeleteMessage';
-    $params{MessageId} = $message_id;
+    $params{ReceiptHandle} = $receipt_handle;
     
     my $href = $self->_dispatch(\%params);
-}
-
-sub PeekMessage {
-    my ($self, $message_id, %params) = @_;
-    
-    $params{Action} = 'PeekMessage';
-    $params{MessageId} = $message_id;
-    
-    my $href = $self->_dispatch(\%params);
-    
-    return new Amazon::SQS::Simple::Message($href->{Message});
-}
-
-sub ChangeMessageVisibility {
-    my ($self, $message_id, $timeout, %params) = @_;
-    
-    $params{Action} = 'ChangeMessageVisibility';
-    $params{MessageId} = $message_id;
-    $params{VisibilityTimeout} = $timeout;
-    
-    my $href = $self->_dispatch(\%params);    
 }
 
 sub GetAttributes {
     my ($self, %params) = @_;
     
-    $params{Action} = 'GetQueueAttributes';
-    $params{Attribute} ||= 'All';
+    $params{Action}          = 'GetQueueAttributes';
+    $params{AttributeName} ||= 'All';
     
-    my $href = $self->_dispatch(\%params, [ 'AttributedValue' ]);
-        
+    my $href = $self->_dispatch(\%params, [ 'Attribute' ]);
+    
     my %result;
-    if ($href->{'AttributedValue'}) {
-        foreach my $attr (@{$href->{'AttributedValue'}}) {
-            $result{$attr->{Attribute}} = $attr->{Value};
+    if ($href->{GetQueueAttributesResult}) {
+        foreach my $attr (@{$href->{GetQueueAttributesResult}{Attribute}}) {
+            $result{$attr->{Name}} = $attr->{Value};
         }
     }
+    
     return \%result;
 }
 
 sub SetAttribute {
     my ($self, $key, $value, %params) = @_;
     
-    $params{Action}    = 'SetQueueAttributes';
-    $params{Attribute} = $key;
-    $params{Value}     = $value;
+    $params{Action}           = 'SetQueueAttributes';
+    $params{Attribute.Name}   = $key;
+    $params{Attribute.Value}  = $value;
     
     my $href = $self->_dispatch(\%params);
-}
-
-sub ListGrants {
-    my ($self, %params) = @_;
-    
-    $params{Action} = 'ListGrants';
-    
-    my $href = $self->_dispatch(\%params, [ 'Grantee', 'GrantList' ]);
-
-    my $result;
-    
-    foreach my $gl (@{$href->{GrantList}}) {
-        $result->{$gl->{Permission}} = $gl->{Grantee};
-        foreach my $g (@{$gl->{Grantee}}) {
-            delete $g->{'xmlns:xsi'}; 
-            delete $g->{'xsi:type'}; 
-        }
-    }
-    return $result;
-}
-
-sub AddGrant {
-    my $self = shift;
-    return $self->_AddRemoveGrant('AddGrant', @_);
-}
-
-sub RemoveGrant {
-    my $self = shift;
-    return $self->_AddRemoveGrant('RemoveGrant', @_);
-}
-
-sub _AddRemoveGrant {
-    my ($self, $action, $identifier, $permission, %params) = @_;
-    
-    $params{Action}     = $action;
-    $params{Permission} = $permission;
-    
-    if ($params{IdentifierType} && uc($params{IdentifierType}) eq 'ID') {
-        $params{'Grantee.ID'} = $identifier;
-    }
-    else {
-        $params{'Grantee.EmailAddress'} = $identifier;
-    }
-    delete $params{IdentifierType};
-    
-    my $href = $self->_dispatch(\%params, [ 'Grantee' ]);
-    
-    foreach (@{$href->{GrantList}{Grantee}}) {
-        delete $_->{'xmlns:xsi'}; 
-        delete $_->{'xsi:type'}; 
-    }
-    return $href->{GrantList}{Grantee};
 }
 
 1;
@@ -195,14 +126,13 @@ more details.
 
 Get the endpoint for the queue.
 
-=item B<Delete($force, [%opts])>
+=item B<Delete([%opts])>
 
-Deletes the queue. If C<$force> is true, deletes the queue even if it
-still contains messages.
+Deletes the queue. Any messages contained in the queue will be lost.
 
 =item B<SendMessage($message, [%opts])>
 
-Sends the message. The message can be up to 256KB in size and should be
+Sends the message. The message can be up to 8KB in size and should be
 plain text.
 
 =item B<ReceiveMessage([%opts])>
@@ -226,24 +156,6 @@ Number of messages to return
 
 Delete the message with the specified message ID from the queue
 
-=item B<PeekMessage($message_id, [%opts])>
-
-Fetch the message with the specified message ID. Unlike C<ReceiveMessage>
-this doesn't affect the visibility of the message.
-
-Returns an C<Amazon::SQS::Simple::Message> object. See 
-L<Amazon::SQS::Simple::Message> for more details.
-
-=item B<ChangeMessageVisibility($message_id, $timeout, [%opts])>
-
-Sets the timeout visibility of the message with the specified message ID
-to the specified timeout, in seconds.
-
-Note that the timeout counts from the time the method is called. So if
-retrieved a message 30 seconds ago that had a timeout of 600 seconds, and
-call ChangeMessageVisility with a new timeout of 300s, the visibility will
-timeout in 300s.
-
 =item B<GetAttributes([%opts])>
 
 Get the attributes for the queue. Returns a reference to a hash
@@ -262,50 +174,6 @@ attribute names are returned:
 
 Sets the value for a queue attribute. Currently the only valid
 attribute name is C<VisibilityTimeout>.
-
-=item B<AddGrant($identifier, $permission, [%opts])>
-
-Adds the user identified by C<$identifier> to the list of grantees for the list,
-with the permissions specified by C<$permission>.
-
-C<$identifier> should be an email address of a person with an Amazon Web Services
-account. Alternatively, use a user ID in the format returned by ListGrants and add
-C<IdentifierType => 'ID'> to C<%opts>.
-
-C<$permission> must be one of C<ReceiveMessage>, C<SendMessage> or C<FullControl>.
-
-=item B<RemoveGrant($identifier, $permission, [%opts])>
-
-Revokes the permissions specified by C<$permission> from the user identified by 
-C<$identifier> for the list.
-
-C<$identifier> should be an email address of a person with an Amazon Web Services
-account. Alternatively, use a user ID in the format returned by ListGrants and add
-C<IdentifierType => 'ID'> to C<%opts>.
-
-C<$permission> must be one of C<ReceiveMessage>, C<SendMessage> or C<FullControl>.
-
-=item B<ListGrants([%opts])>
-
-List the grantees for this queue. Returns a hashref mapping permission types
-to arrays of hashrefs identifying users.
-
-Permission types will be one of C<RECEIVEMESSAGE>, C<SENDMESSAGE> or C<FULLCONTROL>.
-
-The hashrefs identifying users have the following keys:
-
-=over 4
-
-=item * ID
-
-A unique identifier for the user
-
-=item * DisplayName
-
-The user's display name, as registered on Amazon.com. The display name for a
-user can change over time.
-
-=back
 
 =back
 

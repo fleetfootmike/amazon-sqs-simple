@@ -1,18 +1,8 @@
-package Amazon::SQS::Simple::Message;
+package Amazon::SQS::Simple::SendResponse;
 
 sub new {
     my ($class, $msg) = @_;
     return bless ($msg, $class);
-}
-
-sub MessageBody {
-    my $self = shift;
-    return $self->{Body};
-}
-
-sub MD5OfBody {
-    my $self = shift;
-    return $self->{MD5OfBody};
 }
 
 sub MessageId {
@@ -20,9 +10,9 @@ sub MessageId {
     return $self->{MessageId};
 }
 
-sub ReceiptHandle {
+sub MD5OfMessageBody {
     my $self = shift;
-    return $self->{ReceiptHandle};
+    return $self->{MD5OfMessageBody};
 }
 
 1;

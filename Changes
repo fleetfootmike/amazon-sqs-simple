@@ -15,3 +15,10 @@ Revision history for Amazon-SQS-Simple
 0.05    06 August 2007
         Fixed bug in Queue.pm where RetrieveMessage could attempt to
         bless a null reference.
+
+0.06    06 February 2008
+        Updated to be compatible with the latest version of SQS
+        (2008-01-01). NOTE: This version introduces non-backwards
+        compatible changes! See this URL for details of the API change:
+        http://developer.amazonwebservices.com/connect/entry.jspa?externalID=1148
+
