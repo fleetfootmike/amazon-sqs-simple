@@ -12,7 +12,6 @@ GetOptions(
     'help', 
     'delete', 
     'create', 
-    'force', 
     'info', 
     'access-key', 
     'secret-key',
@@ -47,12 +46,7 @@ OPTIONS:
         create a queue with the given name
 
     --delete
-        delete the queue with the given name, unless
-        it contains messages (use --force to override)
-
-    --force
-        use with --delete to force deletion even if the
-        queue contains messages
+        delete the queue with the given name
 
     --info
         print info about the queue
@@ -116,7 +110,7 @@ if ($opts{flush}) {
 }
 
 if ($opts{delete}) {
-    q_delete($q, $opts{force});
+    q_delete($q);
 }
 
 sub q_find {
@@ -141,8 +135,7 @@ sub q_create {
 
 sub q_delete {
     my $queue = shift;
-    my $force = shift;
-    my $href = $queue->Delete($force);
+    my $href = $queue->Delete();
 }
 
 sub q_info {
@@ -156,11 +149,11 @@ sub q_info {
 
 sub q_flush {
     my $queue = shift;
-    while (my $msg = $queue->ReceiveMessage()) {
+    while (my $msg = $queue->ReceiveMessage) {
         if ($opts{verbose}) {
-            print "Deleting " . $msg->MessageId() . "\n";
+            print "Deleting " . $msg->MessageId . "\n";
         }
-        $queue->DeleteMessage($msg->MessageId());
+        $queue->DeleteMessage($msg->ReceiptHandle);
     }
 }
 
