@@ -125,8 +125,11 @@ sub _get_signed_query {
     
     # Need to escape + characters in signature
     # see http://docs.amazonwebservices.com/AWSSimpleQueueService/2006-04-01/Query_QueryAuth.html
-    $params->{Signature}   = uri_escape(encode_base64($hmac->digest, ''));
-    $params->{MessageBody} = uri_escape($params->{MessageBody}) if $params->{MessageBody};
+    $params->{Signature}     = uri_escape(encode_base64($hmac->digest, ''));
+    $params->{MessageBody}   = uri_escape($params->{MessageBody}) if $params->{MessageBody};
+    
+    # Likewise, need to escape + characters in ReceiptHandle
+    $params->{ReceiptHandle} = uri_escape($params->{ReceiptHandle}) if $params->{ReceiptHandle};
     
     my $query = join('&', map { $_ . '=' . $params->{$_} } keys %$params);
     return $query;

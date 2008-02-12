@@ -61,9 +61,9 @@ foreach my $msg_type (keys %messages) {
 
 sleep 5;
 
-$response = $q->ReceiveMessage();
-ok(UNIVERSAL::isa($response, 'Amazon::SQS::Simple::Message'), 'ReceiveMessage returns Amazon::SQS::Simple::Message object');
-ok((grep {$_ eq $response->MessageBody} values %messages), 'ReceiveMessage returned one of the messages we wrote');
+my $received_msg = $q->ReceiveMessage();
+ok(UNIVERSAL::isa($received_msg, 'Amazon::SQS::Simple::Message'), 'ReceiveMessage returns Amazon::SQS::Simple::Message object');
+ok((grep {$_ eq $received_msg->MessageBody} values %messages), 'ReceiveMessage returned one of the messages we wrote');
 
 # Have a few goes at GetAttributes, sometimes takes a while for SetAttributes
 # method to be processed
@@ -71,7 +71,7 @@ my $i = 0;
 do {
     sleep 10 if $i++;
     $href = $q->GetAttributes();
-} while ((!$href->{VisibilityTimeout} || $href->{VisibilityTimeout} != $timeout) && $i < 10);
+} while ((!$href->{VisibilityTimeout} || $href->{VisibilityTimeout} != $timeout) && $i < 20);
 
 ok(
     $href->{VisibilityTimeout} && $href->{VisibilityTimeout} == $timeout
@@ -79,8 +79,8 @@ ok(
 ) or diag("Failed after $i attempts, sent $timeout, got back " . ($href->{VisibilityTimeout} ? $href->{VisibilityTimeout} : 'undef'));
 
 
-eval { $q->DeleteMessage($response->ReceiptHandle); };
-ok(!$@, 'DeleteMessage on ReceiptHandle of received message');
+eval { $q->DeleteMessage($received_msg->ReceiptHandle); };
+ok(!$@, 'DeleteMessage on ReceiptHandle of received message') or diag($@);
 
 eval { $q->Delete(); };
-ok(!$@, 'Delete on non-empty queue');
+ok(!$@, 'Delete on non-empty queue') or diag($@);

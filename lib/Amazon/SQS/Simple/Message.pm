@@ -52,6 +52,14 @@ Get the message body.
 
 Get the message unique identifier
 
+=item B<MD5OfBody()>
+
+Get the MD5 checksum of the message body
+
+=item B<ReceiptHandle()>
+
+Get the receipt handle for the message (used as an argument to DeleteMessage)
+
 =back
 
 =head1 AUTHOR

@@ -77,9 +77,9 @@ sub GetAttributes {
 sub SetAttribute {
     my ($self, $key, $value, %params) = @_;
     
-    $params{Action}           = 'SetQueueAttributes';
-    $params{Attribute.Name}   = $key;
-    $params{Attribute.Value}  = $value;
+    $params{Action}             = 'SetQueueAttributes';
+    $params{'Attribute.Name'}   = $key;
+    $params{'Attribute.Value'}  = $value;
     
     my $href = $self->_dispatch(\%params);
 }
