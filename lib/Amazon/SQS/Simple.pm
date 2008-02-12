@@ -88,7 +88,7 @@ Service
     print $msg->MessageBody() # Hello world!
 
     # Delete the message
-    $q->DeleteMessage($msg->MessageId());
+    $q->DeleteMessage($msg->ReceiptHandle());
 
     # Delete the queue
     $q->Delete();
