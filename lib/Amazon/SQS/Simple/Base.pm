@@ -161,7 +161,7 @@ Amazon::SQS::Simple::Base - No user-serviceable parts included
 
 =head1 AUTHOR
 
-Copyright 2007 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
+Copyright 2007-2008 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

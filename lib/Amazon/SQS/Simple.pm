@@ -98,6 +98,13 @@ Service
 Amazon::SQS::Simple is an OO API for the Amazon Simple Queue
 Service.
 
+=head1 IMPORTANT
+
+This version of Amazon::SQS::Simple works against version 2008-01-01 of
+the SQS API. It will NOT work against earlier versions of the API: use 
+Amazon::SQS::Simple 0.5 for those (but bear in mind that earlier SQS versions
+are slated for deprecation - see aws.amazon.com for details.)
+
 =head1 CONSTRUCTOR
 
 =over 2
@@ -206,7 +213,7 @@ You generally do not need to supply this option.
 
 =head1 AUTHOR
 
-Copyright 2007 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
+Copyright 2007-2008 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
