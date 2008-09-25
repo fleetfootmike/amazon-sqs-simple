@@ -1,9 +1,12 @@
 package Amazon::SQS::Simple::Queue;
 
+use strict;
+use warnings;
 use Amazon::SQS::Simple::Message;
 use Amazon::SQS::Simple::SendResponse;
 
 use base 'Amazon::SQS::Simple::Base';
+use Amazon::SQS::Simple::Base; # for constants
 
 sub Endpoint {
     my $self = shift;
@@ -12,7 +15,9 @@ sub Endpoint {
 
 sub Delete {
     my $self = shift;
+    my $force = shift; # from API 2007-05-01
     my $params = { Action => 'DeleteQueue' };
+    $params->{ForceDeletion} = 'true' if $force && $self->_api_version() eq +SQS_VERSION_2007_05_01;
     
     my $href = $self->_dispatch($params);    
 }
@@ -24,10 +29,18 @@ sub SendMessage {
     $params{MessageBody} = $message;
     
     my $href = $self->_dispatch(\%params);    
-    
-    return new Amazon::SQS::Simple::SendResponse(
-        $href->{SendMessageResult}
-    );
+
+    if ($self->_api_version() eq +SQS_VERSION_2007_05_01) {
+        return new Amazon::SQS::Simple::SendResponse(
+            $href
+        );
+    }
+    else {
+        # default to most recent version
+        return new Amazon::SQS::Simple::SendResponse(
+            $href->{SendMessageResult}
+        );
+    }
 }
 
 sub ReceiveMessage {
@@ -38,11 +51,23 @@ sub ReceiveMessage {
     my $href = $self->_dispatch(\%params);
 
     my $msg = undef;
-    
-    if (defined $href->{ReceiveMessageResult}{Message}) {
-        $msg = new Amazon::SQS::Simple::Message(
-            $href->{ReceiveMessageResult}{Message}
-        );
+
+    if ($self->_api_version() eq +SQS_VERSION_2007_05_01) {
+        if (defined $href->{Message}) {
+            $msg = new Amazon::SQS::Simple::Message(
+                $href->{Message},
+                $self->_api_version()
+            );
+        }
+    }
+    else {
+        # default to most recent version
+        if (defined $href->{ReceiveMessageResult}{Message}) {
+            $msg = new Amazon::SQS::Simple::Message(
+                $href->{ReceiveMessageResult}{Message},
+                $self->_api_version()
+            );
+        }
     }
     return $msg;
 }
@@ -51,7 +76,13 @@ sub DeleteMessage {
     my ($self, $receipt_handle, %params) = @_;
     
     $params{Action} = 'DeleteMessage';
-    $params{ReceiptHandle} = $receipt_handle;
+    if ($self->_api_version() eq +SQS_VERSION_2007_05_01) {
+        $params{MessageId} = $receipt_handle;
+    }
+    else {
+        # default to the current version
+        $params{ReceiptHandle} = $receipt_handle;
+    }
     
     my $href = $self->_dispatch(\%params);
 }
@@ -60,14 +91,29 @@ sub GetAttributes {
     my ($self, %params) = @_;
     
     $params{Action}          = 'GetQueueAttributes';
-    $params{AttributeName} ||= 'All';
-    
-    my $href = $self->_dispatch(\%params, [ 'Attribute' ]);
-    
+
     my %result;
-    if ($href->{GetQueueAttributesResult}) {
-        foreach my $attr (@{$href->{GetQueueAttributesResult}{Attribute}}) {
-            $result{$attr->{Name}} = $attr->{Value};
+    if ($self->_api_version() eq +SQS_VERSION_2007_05_01) {
+        $params{Attribute} ||= 'All';
+    
+        my $href = $self->_dispatch(\%params, [ 'AttributedValue' ]);
+
+        if ($href->{'AttributedValue'}) {
+            foreach my $attr (@{$href->{'AttributedValue'}}) {
+                $result{$attr->{Attribute}} = $attr->{Value};
+            }
+        }
+    }
+    else {
+        # default to the current version
+        $params{AttributeName} ||= 'All';
+    
+        my $href = $self->_dispatch(\%params, [ 'Attribute' ]);
+
+        if ($href->{GetQueueAttributesResult}) {
+            foreach my $attr (@{$href->{GetQueueAttributesResult}{Attribute}}) {
+                $result{$attr->{Name}} = $attr->{Value};
+            }
         }
     }
     
@@ -78,8 +124,15 @@ sub SetAttribute {
     my ($self, $key, $value, %params) = @_;
     
     $params{Action}             = 'SetQueueAttributes';
-    $params{'Attribute.Name'}   = $key;
-    $params{'Attribute.Value'}  = $value;
+    if ($self->_api_version() eq +SQS_VERSION_2007_05_01) {
+        $params{Attribute} = $key;
+        $params{Value}     = $value;
+    }
+    else {
+        # default to the current version
+        $params{'Attribute.Name'}   = $key;
+        $params{'Attribute.Value'}  = $value;
+    }
     
     my $href = $self->_dispatch(\%params);
 }

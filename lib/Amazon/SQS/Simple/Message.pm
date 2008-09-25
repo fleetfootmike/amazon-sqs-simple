@@ -1,13 +1,26 @@
 package Amazon::SQS::Simple::Message;
 
+use strict;
+use warnings;
+
+use Amazon::SQS::Simple::Base; # for constants
+
 sub new {
-    my ($class, $msg) = @_;
+    my $class = shift;
+    my $msg = shift;
+    my $version = shift || +SQS_VERSION_2008_01_01;
+    $msg->{Version} = $version;
     return bless ($msg, $class);
 }
 
 sub MessageBody {
     my $self = shift;
-    return $self->{Body};
+    if ($self->{Version} eq +SQS_VERSION_2007_05_01) {
+        return $self->{MessageBody};
+    }
+    else {
+        return $self->{Body};
+    }
 }
 
 sub MD5OfBody {

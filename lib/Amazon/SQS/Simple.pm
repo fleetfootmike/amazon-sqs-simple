@@ -1,11 +1,15 @@
 package Amazon::SQS::Simple;
 
+use strict;
+use warnings;
+
 use Carp qw( croak );
 use Amazon::SQS::Simple::Queue;
 
 use base qw(Exporter Amazon::SQS::Simple::Base);
+use Amazon::SQS::Simple::Base; # for constants
 
-our $VERSION   = '0.7';
+our $VERSION   = '0.8';
 our @EXPORT_OK = qw( timestamp );
 
 sub GetQueue {
@@ -24,12 +28,24 @@ sub CreateQueue {
         
     my $href = $self->_dispatch(\%params);
     
-    if ($href->{CreateQueueResult}{QueueUrl}) {
-        return Amazon::SQS::Simple::Queue->new(
-            %$self,
-            Endpoint => $href->{CreateQueueResult}{QueueUrl},
-        );
+    if ($self->_api_version() eq +SQS_VERSION_2007_05_01) {
+        if ($href->{QueueUrl}) {
+            return Amazon::SQS::Simple::Queue->new(
+                %$self,
+                Endpoint => $href->{QueueUrl},
+            );
+        }
     }
+    else {
+        # default to the most recent version
+        if ($href->{CreateQueueResult}{QueueUrl}) {
+            return Amazon::SQS::Simple::Queue->new(
+                %$self,
+                Endpoint => $href->{CreateQueueResult}{QueueUrl},
+            );
+        }
+    }
+    
 }
 
 sub ListQueues {
@@ -39,18 +55,35 @@ sub ListQueues {
         
     my $href = $self->_dispatch(\%params, ['QueueUrl']);
     
-    if ($href->{ListQueuesResult}{QueueUrl}) {
-        my @result = map {
-            new Amazon::SQS::Simple::Queue(
-                %$self,
-                Endpoint => $_,
-            )        
-        } @{$href->{ListQueuesResult}{QueueUrl}};
-
-        return \@result;
+    if ($self->_api_version() eq +SQS_VERSION_2007_05_01) {
+        if ($href->{QueueUrl}) {
+            my @result = map {
+                new Amazon::SQS::Simple::Queue(
+                    %$self,
+                    Endpoint => $_,
+                )        
+            } @{$href->{QueueUrl}};
+            return \@result;
+        }
+        else {
+            return undef;
+        }
     }
     else {
-        return undef;
+        # default to the current version
+        if ($href->{ListQueuesResult}{QueueUrl}) {
+            my @result = map {
+                new Amazon::SQS::Simple::Queue(
+                    %$self,
+                    Endpoint => $_,
+                )        
+            } @{$href->{ListQueuesResult}{QueueUrl}};
+
+            return \@result;
+        }
+        else {
+            return undef;
+        }
     }
 }
 
@@ -95,15 +128,23 @@ Service
 
 =head1 INTRODUCTION
 
-Amazon::SQS::Simple is an OO API for the Amazon Simple Queue
-Service.
+Amazon::SQS::Simple is an OO API for the Amazon Simple Queue Service.
 
 =head1 IMPORTANT
 
-This version of Amazon::SQS::Simple works against version 2008-01-01 of
-the SQS API. It will NOT work against earlier versions of the API: use 
-Amazon::SQS::Simple 0.5 for those (but bear in mind that earlier SQS versions
-are slated for deprecation - see aws.amazon.com for details.)
+This version of Amazon::SQS::Simple defaults to work against version
+2008-01-01 of the SQS API.
+
+Earlier API versions may or may not work.  
+
+Actions dropped in recent versions will be dropped.  Sometimes
+compatiblity among the Actions is not possible, e.g. Delete in
+2007-05-01 takes a MessageId and in 2008-01-01 takes a ReceiptHandle.
+We change the request parameters based on the SQS API version, it is
+up to the caller to pass the correct value.
+
+Bear in mind that earlier SQS versions are slated for deprecation -
+see aws.amazon.com for details.
 
 =head1 CONSTRUCTOR
 
@@ -116,6 +157,13 @@ Constructs a new Amazon::SQS::Simple object
 C<$access_key> is your Amazon Web Services access key. C<$secret_key> is your Amazon Web
 Services secret key. If you don't have either of these credentials, visit
 L<http://aws.amazon.com/>.
+
+You may specify an optional named argument for the version of the SQS
+API you wish to use.  This allows loading older data.  E.g.:
+
+ my $sqs = new Amazon::SQS::Simple($access_key, $secret_key, Version => '2007-05-01');
+
+This is not guaranteed to work for all older versions.  See IMPORTANT above.
 
 =back
 

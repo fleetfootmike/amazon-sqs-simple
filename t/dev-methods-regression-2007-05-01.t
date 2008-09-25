@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 18;
+use Test::More tests => 17;
 use Digest::MD5 qw(md5_hex);
 
 BEGIN { use_ok('Amazon::SQS::Simple'); }
@@ -10,6 +10,7 @@ BEGIN { use_ok('Amazon::SQS::Simple'); }
 my $sqs = new Amazon::SQS::Simple(
     $ENV{AWS_ACCESS_KEY}, 
     $ENV{AWS_SECRET_KEY},
+    Version => '2007-05-01'
     # _Debug => \*STDERR,
 );
 
@@ -55,14 +56,18 @@ foreach my $msg_type (keys %messages) {
     $response = $q->SendMessage($msg);
     ok(UNIVERSAL::isa($response, 'Amazon::SQS::Simple::SendResponse'), "SendMessage returns Amazon::SQS::Simple::SendResponse object ($msg_type)");
     ok($response->MessageId, 'Got MessageId when sending message');
-    ok($response->MD5OfMessageBody eq md5_hex($msg), 'Got back correct MD5 checksum for message')
-        or diag("Looking for " . md5_hex($msg) . ", got " . $response->MD5OfMessageBody);
+
+    # 2007-05-01 has no MD5 of the message body unlike 2008-01-01
 }
 
 sleep 5;
 
 my $received_msg = $q->ReceiveMessage();
 ok(UNIVERSAL::isa($received_msg, 'Amazon::SQS::Simple::Message'), 'ReceiveMessage returns Amazon::SQS::Simple::Message object');
+
+#use Data::Dumper;
+#diag(Data::Dumper->Dump([$received_msg], [qw(received_msg)]));
+
 ok((grep {$_ eq $received_msg->MessageBody} values %messages), 'ReceiveMessage returned one of the messages we wrote');
 
 # Have a few goes at GetAttributes, sometimes takes a while for SetAttributes
@@ -78,10 +83,13 @@ ok(
     , "GetAttributes"
 ) or diag("Failed after $i attempts, sent $timeout, got back " . ($href->{VisibilityTimeout} ? $href->{VisibilityTimeout} : 'undef'));
 
-
 # 2007-05-01 uses the MessageId, 2008-01-01 uses the ReceiptHandle
-eval { $q->DeleteMessage($received_msg->ReceiptHandle); };
+eval { $q->DeleteMessage($received_msg->MessageId); };
 ok(!$@, 'DeleteMessage on ReceiptHandle of received message') or diag($@);
 
+# 2007-05-01 requires that the queue be empty or use the ForceDeletion = 'true'
 eval { $q->Delete(); };
-ok(!$@, 'Delete on non-empty queue') or diag($@);
+ok($@, 'Delete on non-empty queue should fail') or diag($@);
+eval { $q->Delete(ForceDeletion => 'true'); };
+ok(!$@, 'Delete on non-empty queue should succeed with ForceDeletion') or diag($@);
+

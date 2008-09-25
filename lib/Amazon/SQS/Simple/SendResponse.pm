@@ -1,5 +1,8 @@
 package Amazon::SQS::Simple::SendResponse;
 
+use strict;
+use warnings;
+
 sub new {
     my ($class, $msg) = @_;
     return bless ($msg, $class);
