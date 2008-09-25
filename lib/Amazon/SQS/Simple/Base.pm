@@ -11,7 +11,6 @@ use XML::Simple;
 
 use base qw(Exporter);
 
-use constant DEFAULT_SQS_VERSION    => '2008-01-01';
 use constant SQS_VERSION_2008_01_01 => '2008-01-01';
 use constant SQS_VERSION_2007_05_01 => '2007-05-01';
 use constant BASE_ENDPOINT          => 'http://queue.amazonaws.com';
@@ -19,6 +18,7 @@ use constant MAX_GET_MSG_SIZE       => 4096; # Messages larger than this size wi
                                              # using a POST request. This feature requires
                                              # SQS_VERSION 2007-05-01 or later.
                                        
+our $DEFAULT_SQS_VERSION = +SQS_VERSION_2008_01_01;
 our @EXPORT = qw(SQS_VERSION_2008_01_01 SQS_VERSION_2007_05_01);
 
 use overload '""' => \&_to_string;
@@ -33,6 +33,7 @@ sub new {
         SecretKey        => $secret_key,
         Endpoint         => +BASE_ENDPOINT,
         SignatureVersion => 1,
+        Version          => $DEFAULT_SQS_VERSION,
         @_,
     };
 
@@ -40,18 +41,13 @@ sub new {
         croak "Missing AWSAccessKey or SecretKey";
     }
 
-    # validate the user Version input, otherwise we'll use our own
-    if (exists $self->{Version} && 
-        $self->{Version} ne +SQS_VERSION_2007_05_01 && 
-        $self->{Version} ne +SQS_VERSION_2008_01_01)
-    {
-        croak "Invalid version ('" . $self->{Version} . 
-            "') specified.  Valid versions are '" . +SQS_VERSION_2008_01_01 . 
-            "' and '" . +SQS_VERSION_2007_05_01;
-    }
-
-    if (! exists $self->{Version}) {
-        $self->{Version} = +DEFAULT_SQS_VERSION;
+    # validate the Version, warn if it's not one we recognise
+    my @valid_versions = ( +SQS_VERSION_2007_05_01, +SQS_VERSION_2008_01_01 );
+    if (!grep {$self->{Version} eq $_} @valid_versions) {
+        carp "Warning: " 
+           . $self->{Version} 
+           . " might not be a valid version. Recognised versions are " 
+           . join(', ', @valid_versions);
     }
 
     $self = bless($self, $class);

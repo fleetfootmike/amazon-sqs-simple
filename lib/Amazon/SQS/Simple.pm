@@ -4,12 +4,11 @@ use strict;
 use warnings;
 
 use Carp qw( croak );
-use Amazon::SQS::Simple::Queue;
-
-use base qw(Exporter Amazon::SQS::Simple::Base);
 use Amazon::SQS::Simple::Base; # for constants
+use Amazon::SQS::Simple::Queue;
+use base qw(Exporter Amazon::SQS::Simple::Base);
 
-our $VERSION   = '0.8';
+our $VERSION   = '0.9';
 our @EXPORT_OK = qw( timestamp );
 
 sub GetQueue {
@@ -258,6 +257,11 @@ function.
 You generally do not need to supply this option.
 
 =back
+
+=head1 ACKNOWLEDGEMENTS
+
+Bill Alford wrote the code to support basic functionality of older API versions
+in release 0.9.
 
 =head1 AUTHOR
 

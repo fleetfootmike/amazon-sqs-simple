@@ -3,8 +3,10 @@
 use Test::More tests => 4;
 use Amazon::SQS::Simple;
 
+my $obj;
+
 eval {
-    my $obj = new Amazon::SQS::Simple();
+    $obj = new Amazon::SQS::Simple();
 };
 
 ok($@, "should get a constructor exception when no AWS keys exist");
@@ -15,14 +17,17 @@ like($error,
      "should have a good error message (got: \"$error\")");
 
 eval {
-    my $obj = new Amazon::SQS::Simple('fake access', 'fake secret',
+    $obj = new Amazon::SQS::Simple('fake access', 'fake secret',
                                       Version => "bogus version");
 };
 
-ok($@, "should get a constructor exception when a bad version is specified");
-$error = $@;
-chomp($error);
-like($error,
-     qr/invalid.*version.* valid.*are/i,
-     "should have a good error message (got: \"$error\")");
+ok(!$@, 
+    "Giving an unrecognised version is OK");
 
+eval {
+    $obj = new Amazon::SQS::Simple('fake access', 'fake secret');
+};
+
+ok(!$@ 
+    && $obj->_api_version eq $Amazon::SQS::Simple::Base::DEFAULT_SQS_VERSION,
+    "Constructor should default to the default API version if no version is given");

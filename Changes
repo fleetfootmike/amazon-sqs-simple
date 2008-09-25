@@ -28,4 +28,5 @@ Revision history for Amazon-SQS-Simple
 0.08    31 Jul 2008
         Documentation fixes 
 
-
+0.09    25 Sep 2008
+        Added ability to call old API versions
