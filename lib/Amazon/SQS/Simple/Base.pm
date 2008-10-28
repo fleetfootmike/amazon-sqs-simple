@@ -113,7 +113,7 @@ sub _dispatch {
         my $msg;
         eval {
             my $href = XMLin($response->content);
-            $msg = $href->{Errors}{Error}{Message};
+            $msg = $href->{Error}{Message};
         };
         
         my $error = "ERROR: On calling $params->{Action}: " . $response->status_line;

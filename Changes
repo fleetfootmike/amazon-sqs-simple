@@ -1,32 +1,37 @@
 Revision history for Amazon-SQS-Simple
 
-0.01    26 June 2007
+0.1     26 June 2007
         First version, running against SQS version 2007-05-01
 
-0.02    29 June 2007
+0.2     29 June 2007
         Added full POD docs
 
-0.03    17 July 2007
+0.3     17 July 2007
         Added Amazon::SQS::Simple::Base, Amazon::SQS::Simple::Message
 
-0.04    17 July 2007
+0.4     17 July 2007
         Mended POD docs in Base and Message classes
 
-0.05    06 August 2007
+0.5     06 August 2007
         Fixed bug in Queue.pm where RetrieveMessage could attempt to
         bless a null reference.
 
-0.06    06 February 2008
+0.6     06 February 2008
         Updated to be compatible with the latest version of SQS
         (2008-01-01). NOTE: This version introduces non-backwards
         compatible changes! See this URL for details of the API change:
         http://developer.amazonwebservices.com/connect/entry.jspa?externalID=1148
 
-0.07    14 Feb 2008
+0.7     14 Feb 2008
         Documentation fixes
 
-0.08    31 Jul 2008
+0.8     31 Jul 2008
         Documentation fixes 
 
-0.09    25 Sep 2008
+0.9     25 Sep 2008
         Added ability to call old API versions
+
+1.00    28 Oct 2008
+        Fixed bug rt.cpan.org#34120
+        (http://rt.cpan.org/Public/Bug/Display.html?id=34120)
+
