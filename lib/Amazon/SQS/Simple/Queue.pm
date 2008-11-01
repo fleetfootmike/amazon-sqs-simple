@@ -205,9 +205,9 @@ Number of messages to return
 
 =back
 
-=item B<DeleteMessage($message_id, [%opts])>
+=item B<DeleteMessage($receipt_handle, [%opts])>
 
-Delete the message with the specified message ID from the queue
+Delete the message with the specified receipt handle from the queue
 
 =item B<GetAttributes([%opts])>
 

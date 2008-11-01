@@ -113,7 +113,9 @@ sub _dispatch {
         my $msg;
         eval {
             my $href = XMLin($response->content);
-            $msg = $href->{Error}{Message};
+            $msg = $self->_api_version eq +SQS_VERSION_2007_05_01 
+                 ? $href->{Errors}{Error}{Message} 
+                 : $href->{Error}{Message};
         };
         
         my $error = "ERROR: On calling $params->{Action}: " . $response->status_line;
