@@ -35,3 +35,5 @@ Revision history for Amazon-SQS-Simple
         Fixed bug rt.cpan.org#34120
         (http://rt.cpan.org/Public/Bug/Display.html?id=34120)
 
+1.01    1 Nov 2008
+        Improved error reporting when using old API versions
