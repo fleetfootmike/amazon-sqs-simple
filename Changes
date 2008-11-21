@@ -37,3 +37,7 @@ Revision history for Amazon-SQS-Simple
 
 1.01    1 Nov 2008
         Improved error reporting when using old API versions
+
+1.02    21 Nov 2008
+        Fixed bug where interpolating an Amazon::SQS::Simple object in string
+        context threw an error.

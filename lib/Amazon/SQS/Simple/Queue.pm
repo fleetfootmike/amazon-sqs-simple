@@ -8,6 +8,8 @@ use Amazon::SQS::Simple::SendResponse;
 use base 'Amazon::SQS::Simple::Base';
 use Amazon::SQS::Simple::Base; # for constants
 
+use overload '""' => \&_to_string;
+
 sub Endpoint {
     my $self = shift;
     return $self->{Endpoint};
@@ -135,6 +137,11 @@ sub SetAttribute {
     }
     
     my $href = $self->_dispatch(\%params);
+}
+
+sub _to_string {
+    my $self = shift;
+    return $self->Endpoint();
 }
 
 1;

@@ -21,8 +21,6 @@ use constant MAX_GET_MSG_SIZE       => 4096; # Messages larger than this size wi
 our $DEFAULT_SQS_VERSION = +SQS_VERSION_2008_01_01;
 our @EXPORT = qw(SQS_VERSION_2008_01_01 SQS_VERSION_2007_05_01);
 
-use overload '""' => \&_to_string;
-
 sub new {
     my $class = shift;
     my $access_key = shift;
@@ -58,11 +56,6 @@ sub new {
 sub _api_version {
     my $self = shift;
     return $self->{Version};
-}
-
-sub _to_string {
-    my $self = shift;
-    return $self->Endpoint();
 }
 
 sub _dispatch {
