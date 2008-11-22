@@ -41,3 +41,6 @@ Revision history for Amazon-SQS-Simple
 1.02    21 Nov 2008
         Fixed bug where interpolating an Amazon::SQS::Simple object in string
         context threw an error.
+        
+1.03    21 Nov 2008
+        Fixed ReceiveMessages when called with MaxNumberOfMessages > 1

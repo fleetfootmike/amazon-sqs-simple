@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 23;
+use Test::More tests => 24;
 use Digest::MD5 qw(md5_hex);
 
 BEGIN { use_ok('Amazon::SQS::Simple'); }
@@ -55,9 +55,13 @@ ok(!$@, 'SetAttribute');
 $response = $q->ReceiveMessage();
 ok(!defined($response), 'ReceiveMessage called on empty queue returns undef');
 
-sleep 5;
-
 my $lists = $sqs->ListQueues();
+my $iteration = 1;
+while (!defined($lists) && $iteration < 4) {
+    sleep 2;
+    $lists = $sqs->ListQueues();
+    $iteration++;
+}
 ok((grep { $_->Endpoint() eq $q->Endpoint() } @$lists), 'ListQueues returns the queue we just created');
 
 foreach my $msg_type (keys %messages) {
@@ -75,9 +79,14 @@ foreach my $msg_type (keys %messages) {
         or diag("Looking for " . md5_hex($msg) . ", got " . $response->MD5OfMessageBody);
 }
 
-sleep 5;
-
 my $received_msg = $q->ReceiveMessage();
+$iteration = 1;
+
+while (!defined($received_msg) && $iteration < 4) {
+    sleep 2;
+    $received_msg = $q->ReceiveMessage();
+    $iteration++;
+}
 
 eval {
     my $str = "$received_msg";
@@ -89,16 +98,25 @@ ok((grep {$_ eq $received_msg->MessageBody} values %messages), 'ReceiveMessage r
 
 # Have a few goes at GetAttributes, sometimes takes a while for SetAttributes
 # method to be processed
-my $i = 0;
+$iteration = 0;
 do {
-    sleep 10 if $i++;
+    sleep 10 if $iteration++;
     $href = $q->GetAttributes();
-} while ((!$href->{VisibilityTimeout} || $href->{VisibilityTimeout} != $timeout) && $i < 20);
+} while ((!$href->{VisibilityTimeout} || $href->{VisibilityTimeout} != $timeout) && $iteration < 4);
 
 ok(
     $href->{VisibilityTimeout} && $href->{VisibilityTimeout} == $timeout
     , "GetAttributes"
-) or diag("Failed after $i attempts, sent $timeout, got back " . ($href->{VisibilityTimeout} ? $href->{VisibilityTimeout} : 'undef'));
+) or diag("Failed after $iteration attempts, sent $timeout, got back " . ($href->{VisibilityTimeout} ? $href->{VisibilityTimeout} : 'undef'));
+
+for (1..10) {
+    $q->SendMessage($_);
+}
+
+my @messages = $q->ReceiveMessage(MaxNumberOfMessages => 10);
+
+ok(UNIVERSAL::isa($messages[0], 'Amazon::SQS::Simple::Message')
+ , 'Calling ReceiveMessage with MaxNumberOfMessages returns array of Amazon::SQS::Simple::Message objects');
 
 
 # 2007-05-01 uses the MessageId, 2008-01-01 uses the ReceiptHandle

@@ -50,28 +50,39 @@ sub ReceiveMessage {
     
     $params{Action} = 'ReceiveMessage';
     
-    my $href = $self->_dispatch(\%params);
+    my $href = $self->_dispatch(\%params, [qw(Message)]);
 
-    my $msg = undef;
+    my @messages = ();
 
     if ($self->_api_version() eq +SQS_VERSION_2007_05_01) {
         if (defined $href->{Message}) {
-            $msg = new Amazon::SQS::Simple::Message(
-                $href->{Message},
-                $self->_api_version()
-            );
+            foreach (@{$href->{Message}}) {
+                push @messages, new Amazon::SQS::Simple::Message(
+                    $_,
+                    $self->_api_version()
+                );
+            }
         }
     }
     else {
         # default to most recent version
         if (defined $href->{ReceiveMessageResult}{Message}) {
-            $msg = new Amazon::SQS::Simple::Message(
-                $href->{ReceiveMessageResult}{Message},
-                $self->_api_version()
-            );
+            foreach (@{$href->{ReceiveMessageResult}{Message}}) {
+                push @messages, new Amazon::SQS::Simple::Message(
+                    $_,
+                    $self->_api_version()
+                );
+            }
         }
     }
-    return $msg;
+    
+    if (@messages > 1 || wantarray) {
+        return @messages;
+    } elsif (@messages) {
+        return $messages[0];
+    } else {
+        return undef;
+    }
 }
 
 sub DeleteMessage {
@@ -202,13 +213,17 @@ Get the next message from the queue.
 Returns an C<Amazon::SQS::Simple::Message> object. See 
 L<Amazon::SQS::Simple::Message> for more details.
 
+If MaxNumberOfMessages is greater than 1, the method returns
+an array of C<Amazon::SQS::Simple::Message> objects.
+
 Options for ReceiveMessage:
 
 =over 4
 
-=item * NumberOfMessages => NUMBER
+=item * MaxNumberOfMessages => NUMBER
 
-Number of messages to return
+Maximum number of messages to return. Value should be an integer between 1
+and 10 inclusive. Default is 1. 
 
 =back
 
