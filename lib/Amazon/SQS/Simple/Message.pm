@@ -8,19 +8,14 @@ use Amazon::SQS::Simple::Base; # for constants
 sub new {
     my $class = shift;
     my $msg = shift;
-    my $version = shift || +SQS_VERSION_2008_01_01;
+    my $version = shift || $Amazon::SQS::Simple::Base::DEFAULT_SQS_VERSION;
     $msg->{Version} = $version;
     return bless ($msg, $class);
 }
 
 sub MessageBody {
     my $self = shift;
-    if ($self->{Version} eq +SQS_VERSION_2007_05_01) {
-        return $self->{MessageBody};
-    }
-    else {
-        return $self->{Body};
-    }
+    return $self->{Body};
 }
 
 sub MD5OfBody {

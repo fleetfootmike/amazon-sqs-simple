@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 24;
+use Test::More tests => 26;
 use Digest::MD5 qw(md5_hex);
 
 BEGIN { use_ok('Amazon::SQS::Simple'); }
@@ -17,6 +17,9 @@ eval {
     my $str = "$sqs";
 };
 ok(!$@, "Interpolating Amazon::SQS::Simple object in string context");
+
+ok($sqs->_api_version eq $Amazon::SQS::Simple::Base::DEFAULT_SQS_VERSION,
+    "Constructor should default to the default API version");
 
 isa_ok($sqs, 'Amazon::SQS::Simple', "[$$] Amazon::SQS::Simple object created successfully");
 
@@ -118,8 +121,12 @@ my @messages = $q->ReceiveMessage(MaxNumberOfMessages => 10);
 ok(UNIVERSAL::isa($messages[0], 'Amazon::SQS::Simple::Message')
  , 'Calling ReceiveMessage with MaxNumberOfMessages returns array of Amazon::SQS::Simple::Message objects');
 
+eval { $q->ChangeMessageVisibility($received_msg->ReceiptHandle, 120); };
+ok(!$@, 'ChangeMessageVisibility on ReceiptHandle of received message') or diag($@);
 
-# 2007-05-01 uses the MessageId, 2008-01-01 uses the ReceiptHandle
+eval { $q->ChangeMessageVisibility($received_msg->ReceiptHandle); };
+ok($@, 'ChangeMessageVisibility with no timeout is fatal');
+
 eval { $q->DeleteMessage($received_msg->ReceiptHandle); };
 ok(!$@, 'DeleteMessage on ReceiptHandle of received message') or diag($@);
 

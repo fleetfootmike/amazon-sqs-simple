@@ -8,7 +8,7 @@ use Amazon::SQS::Simple::Base; # for constants
 use Amazon::SQS::Simple::Queue;
 use base qw(Exporter Amazon::SQS::Simple::Base);
 
-our $VERSION   = '1.03';
+our $VERSION   = '1.04';
 our @EXPORT_OK = qw( timestamp );
 
 sub GetQueue {
@@ -27,24 +27,12 @@ sub CreateQueue {
         
     my $href = $self->_dispatch(\%params);
     
-    if ($self->_api_version() eq +SQS_VERSION_2007_05_01) {
-        if ($href->{QueueUrl}) {
-            return Amazon::SQS::Simple::Queue->new(
-                %$self,
-                Endpoint => $href->{QueueUrl},
-            );
-        }
+    if ($href->{CreateQueueResult}{QueueUrl}) {
+        return Amazon::SQS::Simple::Queue->new(
+            %$self,
+            Endpoint => $href->{CreateQueueResult}{QueueUrl},
+        );
     }
-    else {
-        # default to the most recent version
-        if ($href->{CreateQueueResult}{QueueUrl}) {
-            return Amazon::SQS::Simple::Queue->new(
-                %$self,
-                Endpoint => $href->{CreateQueueResult}{QueueUrl},
-            );
-        }
-    }
-    
 }
 
 sub ListQueues {
@@ -54,35 +42,19 @@ sub ListQueues {
         
     my $href = $self->_dispatch(\%params, ['QueueUrl']);
     
-    if ($self->_api_version() eq +SQS_VERSION_2007_05_01) {
-        if ($href->{QueueUrl}) {
-            my @result = map {
-                new Amazon::SQS::Simple::Queue(
-                    %$self,
-                    Endpoint => $_,
-                )        
-            } @{$href->{QueueUrl}};
-            return \@result;
-        }
-        else {
-            return undef;
-        }
+    # default to the current version
+    if ($href->{ListQueuesResult}{QueueUrl}) {
+        my @result = map {
+            new Amazon::SQS::Simple::Queue(
+                %$self,
+                Endpoint => $_,
+            )        
+        } @{$href->{ListQueuesResult}{QueueUrl}};
+
+        return \@result;
     }
     else {
-        # default to the current version
-        if ($href->{ListQueuesResult}{QueueUrl}) {
-            my @result = map {
-                new Amazon::SQS::Simple::Queue(
-                    %$self,
-                    Endpoint => $_,
-                )        
-            } @{$href->{ListQueuesResult}{QueueUrl}};
-
-            return \@result;
-        }
-        else {
-            return undef;
-        }
+        return undef;
     }
 }
 
