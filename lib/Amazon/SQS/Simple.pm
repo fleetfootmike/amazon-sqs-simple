@@ -104,18 +104,9 @@ Amazon::SQS::Simple is an OO API for the Amazon Simple Queue Service.
 =head1 IMPORTANT
 
 This version of Amazon::SQS::Simple defaults to work against version
-2008-01-01 of the SQS API.
+2009-02-01 of the SQS API.
 
 Earlier API versions may or may not work.  
-
-Actions dropped in recent versions will be dropped.  Sometimes
-compatiblity among the Actions is not possible, e.g. Delete in
-2007-05-01 takes a MessageId and in 2008-01-01 takes a ReceiptHandle.
-We change the request parameters based on the SQS API version, it is
-up to the caller to pass the correct value.
-
-Bear in mind that earlier SQS versions are slated for deprecation -
-see aws.amazon.com for details.
 
 =head1 CONSTRUCTOR
 
@@ -132,9 +123,7 @@ L<http://aws.amazon.com/>.
 You may specify an optional named argument for the version of the SQS
 API you wish to use.  This allows loading older data.  E.g.:
 
- my $sqs = new Amazon::SQS::Simple($access_key, $secret_key, Version => '2007-05-01');
-
-This is not guaranteed to work for all older versions.  See IMPORTANT above.
+ my $sqs = new Amazon::SQS::Simple($access_key, $secret_key, Version => '2008-01-01');
 
 =back
 

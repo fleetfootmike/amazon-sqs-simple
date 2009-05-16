@@ -15,8 +15,7 @@ use constant SQS_VERSION_2009_02_01 => '2009-02-01';
 use constant SQS_VERSION_2008_01_01 => '2008-01-01';
 use constant BASE_ENDPOINT          => 'http://queue.amazonaws.com';
 use constant MAX_GET_MSG_SIZE       => 4096; # Messages larger than this size will be sent
-                                             # using a POST request. This feature requires
-                                             # SQS_VERSION 2007-05-01 or later.
+                                             # using a POST request.
                                        
 our $DEFAULT_SQS_VERSION = +SQS_VERSION_2009_02_01;
 our @EXPORT = qw(SQS_VERSION_2009_02_01 SQS_VERSION_2008_01_01);
