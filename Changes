@@ -44,3 +44,7 @@ Revision history for Amazon-SQS-Simple
         
 1.03    21 Nov 2008
         Fixed ReceiveMessages when called with MaxNumberOfMessages > 1
+        
+1.04    23 May 2009
+        Added support for API version 2009-02-01
+        Removed support for API version 2007-05-01
