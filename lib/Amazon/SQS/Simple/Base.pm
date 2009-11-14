@@ -98,7 +98,7 @@ sub _dispatch {
         
     if ($response->is_success) {
         $self->_debug_log($response->content);
-        my $href = XMLin($response->content, ForceArray => $force_array);
+        my $href = XMLin($response->content, ForceArray => $force_array, KeyAttr => {});
         return $href;
     }
     else {

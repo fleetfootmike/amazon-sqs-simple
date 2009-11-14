@@ -8,7 +8,7 @@ use Amazon::SQS::Simple::Base; # for constants
 use Amazon::SQS::Simple::Queue;
 use base qw(Exporter Amazon::SQS::Simple::Base);
 
-our $VERSION   = '1.04';
+our $VERSION   = '1.05';
 our @EXPORT_OK = qw( timestamp );
 
 sub GetQueue {

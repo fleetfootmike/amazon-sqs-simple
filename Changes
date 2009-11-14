@@ -48,3 +48,7 @@ Revision history for Amazon-SQS-Simple
 1.04    23 May 2009
         Added support for API version 2009-02-01
         Removed support for API version 2007-05-01
+
+1.05    14 Nov 2009
+        Minor tweak to improve the lives of folks using strict and mod_perl
+        (Thanks to Stephen Sayre)
