@@ -8,7 +8,7 @@ use Amazon::SQS::Simple::Base; # for constants
 use Amazon::SQS::Simple::Queue;
 use base qw(Exporter Amazon::SQS::Simple::Base);
 
-our $VERSION   = '1.05';
+our $VERSION   = '1.06';
 our @EXPORT_OK = qw( timestamp );
 
 sub GetQueue {
@@ -112,7 +112,7 @@ Earlier API versions may or may not work.
 
 =over 2
 
-=item new($access_key, $secret_key)
+=item new($access_key, $secret_key, [%opts])
 
 Constructs a new Amazon::SQS::Simple object
 
@@ -120,10 +120,21 @@ C<$access_key> is your Amazon Web Services access key. C<$secret_key> is your Am
 Services secret key. If you don't have either of these credentials, visit
 L<http://aws.amazon.com/>.
 
-You may specify an optional named argument for the version of the SQS
-API you wish to use.  This allows loading older data.  E.g.:
+Options for new:
+
+=over 4
+
+=item Timeout => SECONDS
+
+Set the HTTP user agent's timeout (default is 180 seconds)
+
+=item Version => VERSION_STRING
+
+Specifies the SQS API version you wish to use. E.g.:
 
  my $sqs = new Amazon::SQS::Simple($access_key, $secret_key, Version => '2008-01-01');
+
+=back
 
 =back
 

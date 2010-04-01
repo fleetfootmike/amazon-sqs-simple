@@ -13,6 +13,7 @@ BEGIN { use_ok('Amazon::SQS::Simple'); }
 my $sqs = new Amazon::SQS::Simple(
     $ENV{AWS_ACCESS_KEY}, 
     $ENV{AWS_SECRET_KEY},
+    Timeout => 20,
     # _Debug => \*STDERR,
 );
 

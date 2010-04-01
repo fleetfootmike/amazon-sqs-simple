@@ -67,6 +67,10 @@ sub _dispatch {
     my $response;
     my $post_body;
     
+    if ($self->{Timeout}) {
+        $ua->timeout($self->{Timeout});
+    }
+    
     $params = {
         AWSAccessKeyId      => $self->{AWSAccessKeyId},
         Version             => $self->{Version},

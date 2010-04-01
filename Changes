@@ -52,3 +52,6 @@ Revision history for Amazon-SQS-Simple
 1.05    14 Nov 2009
         Minor tweak to improve the lives of folks using strict and mod_perl
         (Thanks to Stephen Sayre)
+
+1.06    31 Mar 2010
+        Added Timeout constructor arg
