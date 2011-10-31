@@ -104,7 +104,7 @@ Amazon::SQS::Simple is an OO API for the Amazon Simple Queue Service.
 =head1 IMPORTANT
 
 This version of Amazon::SQS::Simple defaults to work against version
-2009-02-01 of the SQS API.
+2011-10-01 of the SQS API.
 
 Earlier API versions may or may not work.  
 

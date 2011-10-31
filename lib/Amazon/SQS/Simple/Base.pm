@@ -11,14 +11,15 @@ use XML::Simple;
 
 use base qw(Exporter);
 
+use constant SQS_VERSION_2011_10_01 => '2011-10-01';
 use constant SQS_VERSION_2009_02_01 => '2009-02-01';
 use constant SQS_VERSION_2008_01_01 => '2008-01-01';
 use constant BASE_ENDPOINT          => 'http://queue.amazonaws.com';
 use constant MAX_GET_MSG_SIZE       => 4096; # Messages larger than this size will be sent
                                              # using a POST request.
                                        
-our $DEFAULT_SQS_VERSION = +SQS_VERSION_2009_02_01;
-our @EXPORT = qw(SQS_VERSION_2009_02_01 SQS_VERSION_2008_01_01);
+our $DEFAULT_SQS_VERSION = +SQS_VERSION_2011_10_01;
+our @EXPORT = qw(SQS_VERSION_2011_10_01 SQS_VERSION_2009_02_01 SQS_VERSION_2008_01_01);
 
 sub new {
     my $class = shift;
@@ -39,7 +40,7 @@ sub new {
     }
 
     # validate the Version, warn if it's not one we recognise
-    my @valid_versions = ( +SQS_VERSION_2008_01_01, +SQS_VERSION_2009_02_01 );
+    my @valid_versions = ( +SQS_VERSION_2008_01_01, +SQS_VERSION_2009_02_01, +SQS_VERSION_2011_10_01 );
     if (!grep {$self->{Version} eq $_} @valid_versions) {
         carp "Warning: " 
            . $self->{Version} 
