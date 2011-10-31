@@ -152,47 +152,56 @@ ok($@, 'ChangeMessageVisibility with no timeout is fatal');
 #################################################
 #### Adding and removing permissions
 
-my $alt_sqs = new Amazon::SQS::Simple('AKIAJU363N3TSON4J23A','6vO9pOmw4L4v4WrDfJQWlEdJkaadojD6ArHEvkCX');
-my $alt_q   = $alt_sqs->GetQueue($q->Endpoint);
-eval { my $alt_msg = $alt_q->ReceiveMessage };
-ok($@, "Attempting to pop queue from different user fails");
+SKIP: {
 
-my $alt_aws_account_num = '306667659257'; # account number for simonwhitaker@me.com account
-eval { $q->AddPermission('SimonTest', {$alt_aws_account_num => 'ReceiveMessage'})};
-ok(!$@, "AddPermission for account $alt_aws_account_num") or diag($@);
+    # these environment variables may hold information about a separate account through which to test permissions
+    skip "ALT_AWS_ACCESS_KEY environment variable is not defined",  6 unless exists $ENV{ALT_AWS_ACCESS_KEY};
+    skip "ALT_AWS_SECRET_KEY environment variable is not defined",  6 unless exists $ENV{ALT_AWS_SECRET_KEY};
+    skip "ALT_AWS_ACCOUNT_NUM environment variable is not defined", 6 unless exists $ENV{ALT_AWS_ACCOUNT_NUM};
 
-# wait until we've seen the policy appear in the queue attributes twice in a row
-my $policy_applied = 0;
-my $tries = 0;
-while ($policy_applied < 2 && $tries < 10) {
-    my $attr = $q->GetAttributes;
-    if (exists $attr->{Policy}) { $policy_applied++ } else { $policy_applied = 0 }
-    sleep(5) if $policy_applied < 2 && $tries < 10;
-}
+    my $alt_sqs = new Amazon::SQS::Simple($ENV{ALT_AWS_ACCESS_KEY}, $ENV{ALT_AWS_SECRET_KEY});
+    my $alt_q   = $alt_sqs->GetQueue($q->Endpoint);
+    eval { my $alt_msg = $alt_q->ReceiveMessage };
+    ok($@, "Attempting to pop queue from different user fails");
 
-eval { my $alt_msg = $alt_q->ReceiveMessage };
-ok(!$@, "Attempting to pop queue from user with ReceiveMessage permissions succeeds") or diag($@);
+    my $alt_aws_account_num = $ENV{ALT_AWS_ACCOUNT_NUM}; # this number can be found in the endpoint
+    eval { $q->AddPermission('SimonTest', {$alt_aws_account_num => 'ReceiveMessage'})};
+    ok(!$@, "AddPermission for account $alt_aws_account_num") or diag($@);
 
-eval { $q->AddPermission('SimonTest2', {$alt_aws_account_num => 'FooBar'})};
-ok($@, "AddPermission for account $alt_aws_account_num with bad ActionName is fatal");
-
-eval { $q->RemovePermission('SimonTest')};
-ok(!$@, "RemovePermission for account $alt_aws_account_num") or diag($@);
-
-my $policy_removed = 0;
-$tries = 0;
-while ($policy_removed < 2 && $tries < 10) {
-    my $attr = $q->GetAttributes;
-    if ($attr->{Policy} && $attr->{Policy} !~ /$alt_aws_account_num/) { 
-        $policy_removed++;
-    } else { 
-        $policy_removed = 0;
+    # wait until we've seen the policy appear in the queue attributes twice in a row
+    my $policy_applied = 0;
+    my $tries = 0;
+    while ($policy_applied < 2 && $tries < 10) {
+        my $attr = $q->GetAttributes;
+        if (exists $attr->{Policy}) { $policy_applied++ } else { $policy_applied = 0 }
+        sleep(5) if $policy_applied < 2 && $tries < 10;
     }
-    sleep(5) if $policy_removed < 2 && $tries < 10;
-}
 
-eval { my $alt_msg = $alt_q->ReceiveMessage };
-ok($@, "Attempting to pop queue from different user once permissions revoked fails");
+    eval { my $alt_msg = $alt_q->ReceiveMessage };
+    ok(!$@, "Attempting to pop queue from user with ReceiveMessage permissions succeeds") or diag($@);
+
+    eval { $q->AddPermission('SimonTest2', {$alt_aws_account_num => 'FooBar'})};
+    ok($@, "AddPermission for account $alt_aws_account_num with bad ActionName is fatal");
+
+    eval { $q->RemovePermission('SimonTest')};
+    ok(!$@, "RemovePermission for account $alt_aws_account_num") or diag($@);
+
+    my $policy_removed = 0;
+    $tries = 0;
+    while ($policy_removed < 2 && $tries < 10) {
+        my $attr = $q->GetAttributes;
+        if ($attr->{Policy} && $attr->{Policy} !~ /$alt_aws_account_num/) { 
+            $policy_removed++;
+        } else { 
+            $policy_removed = 0;
+        }
+        sleep(5) if $policy_removed < 2 && $tries < 10;
+    }
+
+    eval { my $alt_msg = $alt_q->ReceiveMessage };
+    ok($@, "Attempting to pop queue from different user once permissions revoked fails");
+
+}
 
 #################################################
 #### Deleting messages
