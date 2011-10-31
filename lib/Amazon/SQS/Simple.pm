@@ -3,7 +3,7 @@ package Amazon::SQS::Simple;
 use strict;
 use warnings;
 
-use Carp qw( croak );
+use Carp qw( croak carp );
 use Amazon::SQS::Simple::Base; # for constants
 use Amazon::SQS::Simple::Queue;
 use base qw(Exporter Amazon::SQS::Simple::Base);
@@ -61,6 +61,10 @@ sub ListQueues {
 
 sub GetQueueUrl {
     my ($self,$queue_name, %params) = @_;
+
+    if ($self->_api_version ne +SQS_VERSION_2011_10_01) {
+        carp "GetQueueUrl not supported in this API version";
+    }
 
     $params{Action}     = 'GetQueueUrl';
     $params{QueueName}  = $queue_name;
