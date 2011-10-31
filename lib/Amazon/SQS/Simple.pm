@@ -30,7 +30,8 @@ sub CreateQueue {
     if ($href->{CreateQueueResult}{QueueUrl}) {
         return Amazon::SQS::Simple::Queue->new(
             %$self,
-            Endpoint => $href->{CreateQueueResult}{QueueUrl},
+            Endpoint  => $href->{CreateQueueResult}{QueueUrl},
+            QueueName => $queue_name,
         );
     }
 }
@@ -56,6 +57,16 @@ sub ListQueues {
     else {
         return undef;
     }
+}
+
+sub GetQueueUrl {
+    my ($self,$queue_name, %params) = @_;
+
+    $params{Action}     = 'GetQueueUrl';
+    $params{QueueName}  = $queue_name;
+
+    my $href = $self->_dispatch(\%params);
+    return $href->{GetQueueUrlResult}{QueueUrl};
 }
 
 sub timestamp {
@@ -174,6 +185,27 @@ Options for ListQueues:
 =item QueueNamePrefix => STRING
 
 Only those queues whose name begins with the specified string are returned.
+
+=back
+
+=item GetQueueUrl($queue_name, [%opts])
+
+Gets the Uniform Resource Locater (URL) of a queue. Returns a scalar value,
+C<undef> on failure.
+
+If an C<Amazon::SQS::Simple::Queue> object has been created, the URL for
+that queue is available from the C<Endpoint> method.  The C<Endpoint> method
+call is preferred where possible because it does not require an HTTP
+request. (See L<Amazon::SQS::Simple::Queue> for details.)
+
+Options for CreateQueue:
+
+=over 4
+
+=item QueueOwnerAWSAccountId => STRING
+
+Access a queue belonging to another AWS account, if that queue's owner has
+granted the necessary permissions.
 
 =back
 

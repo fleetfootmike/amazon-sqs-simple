@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 33;
+use Test::More tests => 34;
 use Digest::MD5 qw(md5_hex);
 
 BEGIN { use_ok('Amazon::SQS::Simple'); }
@@ -65,6 +65,9 @@ while (!defined($lists) && $iteration < 4) {
     $iteration++;
 }
 ok((grep { $_->Endpoint() eq $q->Endpoint() } @$lists), 'ListQueues returns the queue we just created');
+
+my $url = $sqs->GetQueueUrl($queue_name);
+ok (($url =~ m{^$q->{Endpoint}$}), 'GetQueueUrl returns the stored Endpoint');
 
 #################################################
 #### Setting and getting list attributes
