@@ -226,6 +226,17 @@ Deletes the queue. Any messages contained in the queue will be lost.
 Sends the message. The message can be up to 8KB in size and should be
 plain text.
 
+Options for SendMessage:
+
+=over 4
+
+=item * DelaySeconds => NUMBER
+
+Number of seconds to delay before the message becomes available for
+processing.  NOT SUPPORTED IN APIs EARLIER THAN 2011-10-01
+
+=back
+
 =item B<ReceiveMessage([%opts])>
 
 Get the next message from the queue.
@@ -244,6 +255,11 @@ Options for ReceiveMessage:
 
 Maximum number of messages to return. Value should be an integer between 1
 and 10 inclusive. Default is 1. 
+
+=item * VisibilityTimeout => NUMBER
+
+The duration (in seconds) that the received messages are hidden from
+subsequent retrieve requests.
 
 =back
 
@@ -282,16 +298,47 @@ attribute names are returned:
 
 =over 4
 
+=item * ApproximateNumberOfMessages
+
+=item * ApproximateNumberOfMessagesDelayed
+
+=item * ApproximateNumberOfMessagesNotVisible
+
+=item * CreatedTimestamp
+
+=item * DelaySeconds
+
+=item * LastModifiedTimestamp
+
+=item * MaximumMessageSize
+
+=item * MessageRetentionPeriod
+
+=item * Policy
+
+=item * QueueArn
+
 =item * VisibilityTimeout
 
-=item * ApproximateNumberOfMessages
+Not all attributes are available with API versions earlier than
+2011-10-01.  See the AWS SQS API documentation for more details.
 
 =back
 
 =item B<SetAttribute($attribute_name, $attribute_value, [%opts])>
 
-Sets the value for a queue attribute. Currently the only valid
-attribute name is C<VisibilityTimeout>.
+Sets the value for a queue attribute. The settable attribute names are
+
+=item * MaximumMessageSize
+
+=item * MessageRetentionPeriod
+
+=item * Policy
+
+=item * VisibilityTimeout
+
+Not all attributes are available with API versions earlier than
+2011-10-01.  See the AWS SQS API documentation for more details.
 
 =back
 
