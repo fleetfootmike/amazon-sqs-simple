@@ -31,6 +31,10 @@ my %messages    = (
 my $timeout     = 123;
 my ($href, $response);
 
+my $orig_lists = $sqs->ListQueues();
+my $orig_count = 0;
+   $orig_count = scalar @$orig_lists if defined $orig_lists;
+
 my $q = $sqs->CreateQueue($queue_name);
 ok(
     $q 
@@ -56,9 +60,10 @@ ok(!$@, 'SetAttribute');
 $response = $q->ReceiveMessage();
 ok(!defined($response), 'ReceiveMessage called on empty queue returns undef');
 
+sleep 5;
 my $lists = $sqs->ListQueues();
 my $iteration = 1;
-while (!defined($lists) && $iteration < 4) {
+while ((!defined($lists) or (scalar @$lists == $orig_count)) && $iteration < 60) {
     sleep 2;
     $lists = $sqs->ListQueues();
     $iteration++;
