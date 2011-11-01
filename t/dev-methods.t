@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 34;
+use Test::More tests => 35;
 use Digest::MD5 qw(md5_hex);
 
 BEGIN { use_ok('Amazon::SQS::Simple'); }
@@ -35,12 +35,13 @@ my %messages    = (
 );
 
 my $timeout     = 123;
+my $msg_retain  = 456;
 my ($href, $response);
 
 #################################################
 #### Creating, retrieving and listing queues
 
-my $q = $sqs->CreateQueue($queue_name);
+my $q = $sqs->CreateQueue($queue_name, VisibilityTimeout => $timeout, MessageRetentionPeriod => $msg_retain);
 ok(
     $q 
  && $q->Endpoint()
@@ -72,6 +73,11 @@ ok (($url =~ m{^$q->{Endpoint}$}), 'GetQueueUrl returns the stored Endpoint');
 #################################################
 #### Setting and getting list attributes
 
+$href = $q->GetAttributes();
+ok(($href->{VisibilityTimeout} == $timeout and $href->{MessageRetentionPeriod} == $msg_retain), 'CreateQueue set multiple attributes');
+$href = undef;
+
+$timeout++;
 eval {
     $q->SetAttribute('VisibilityTimeout', $timeout);
 };

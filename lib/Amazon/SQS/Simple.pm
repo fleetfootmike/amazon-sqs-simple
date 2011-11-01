@@ -21,6 +21,27 @@ sub GetQueue {
 
 sub CreateQueue {
     my ($self, $queue_name, %params) = @_;
+
+    if ($self->_api_version eq +SQS_VERSION_2011_10_01) {
+        if (exists $params{DevaultVisibilityTimeout}) {
+            $params{VisibilityTimeout} = $params{DefaultVisibilityTimeout};
+            delete $params{DefaultVisibilityTimeout};
+        }
+        my $i = 1;
+        foreach my $name (keys %params) {
+            my $value = $params{$name};
+            delete $params{$name};
+            $params{"Attribute.$i.Name"}=$name;
+            $params{"Attribute.$i.Value"}=$value;
+        } continue {
+            $i++;
+        }
+    } else {
+        if (exists $params{VisibilityTimeout}) {
+            $params{DevaultVisibilityTimeout} = $params{VisibilityTimeout};
+            delete $params{VisibilityTimeout};
+        }
+    }
     
     $params{Action}    = 'CreateQueue';
     $params{QueueName} = $queue_name;
@@ -171,9 +192,32 @@ Options for CreateQueue:
 
 =over 4
 
-=item DefaultVisibilityTimeout => SECONDS
+=item VisibilityTimeout => SECONDS
 
-Set the default visibility timeout for this queue
+The default visibility timeout for this queue.  This option was known as
+C<DefaultVisibilityTimeout> prior to API version 2011-10-01.  Both variants
+are accepted as synonyms.
+
+=item Policy => JSON-STRING
+
+The formal description of the permissions for a resource. For more
+information about Policy, see Basic Policy Structure in the Amazon SQS
+Developer Guide.  NOT SUPPORTED IN APIs EARLIER THAN 2011-10-01.
+
+=item MaximumMessageSize => BYTES
+
+How many bytes a message may comprise.  NOT SUPPORTED IN APIs EARLIER THAN
+2011-10-01.
+
+=item MessageRetentionPeriod => SECONDS
+
+How long the queue retains a message.  NOT SUPPORTED IN APIs EARLIER THAN
+2011-10-01.
+
+=item DelaySeconds => SECONDS
+
+How long to delay each new message before it becomes available to
+ReceiveMessage.   NOT SUPPORTED IN APIs EARLIER THAN 2011-10-01.
 
 =back
 
