@@ -104,6 +104,26 @@ sub _dispatch {
     if ($response->is_success) {
         $self->_debug_log($response->content);
         my $href = XMLin($response->content, ForceArray => $force_array, KeyAttr => {});
+        my %batch_error;
+
+        # detect batch errors and add arrayrefs where XML::Simple is too simple
+        foreach my $parent (grep { m{Batch} } keys %$href) {
+            foreach my $child (grep { m{Batch} } keys %{$href->{$parent}}) {
+                %batch_error = ( parent => $parent, child => $child ) if $child =~ m{Error};
+                next if ref $href->{$parent}{$child} eq 'ARRAY';
+                $href->{$parent}{$child} = [ $href->{$parent}{$child} ];
+            }
+        }
+
+        # carp on batch errors (which may occur even when $response->is_success)
+        if (%batch_error and exists $href->{$batch_error{parent}}{$batch_error{child}}) {
+            my $error = "ERROR: On calling $params->{Action}:";
+            foreach my $element (@{$href->{$batch_error{parent}}{$batch_error{child}}}) {
+                $error .= "\n   on Id '" . $element->{Id} . "', error " . $element->{Code} . " (" . $element->{Message} . ")";
+            }
+            $error .= "\n";
+            carp $error;
+        }
         return $href;
     }
     else {

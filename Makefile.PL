@@ -15,6 +15,7 @@ WriteMakefile(
         'MIME::Base64'      => 0,
         'URI::Escape'       => 0,
         'XML::Simple'       => 0,
+        'Data::UUID'        => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Amazon-SQS-Simple-*' },

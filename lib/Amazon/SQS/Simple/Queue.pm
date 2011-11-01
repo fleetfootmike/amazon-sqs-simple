@@ -5,6 +5,7 @@ use warnings;
 use Amazon::SQS::Simple::Message;
 use Amazon::SQS::Simple::SendResponse;
 use Carp qw( croak carp );
+use Data::UUID;
 
 use base 'Amazon::SQS::Simple::Base';
 use Amazon::SQS::Simple::Base; # for constants
@@ -26,14 +27,13 @@ sub Delete {
 sub SendMessage {
     my ($self, $message, %params) = @_;
     
-    $params{Action} = 'SendMessage';
-    $params{MessageBody} = $message;
-    
+    %params = $self->_arrange_params('SendMessage', $message, %params);
+
     my $href = $self->_dispatch(\%params);    
 
     # default to most recent version
     return new Amazon::SQS::Simple::SendResponse(
-        $href->{SendMessageResult}
+        $href->{SendMessageResult} || $href->{SendMessageBatchResult}
     );
 }
 
@@ -190,6 +190,67 @@ sub _to_string {
     return $self->Endpoint();
 }
 
+{
+my $uuid_generator;
+sub _arrange_params {
+
+    my %argnames = (
+                    SendMessage             => [ ("MessageBody"                       ) ],
+                  );
+
+    my $self = shift;
+    my $type = shift;
+    unless (ref $_[0] eq 'ARRAY') {
+
+        # the usual case, non-batch
+        my %args;
+        foreach my $name (@{$argnames{$type}}) {
+            $args{$name} = shift;
+        }
+        my %params = (@_, %args, Action => $type);
+        return %params;
+
+    } else {
+
+        # user passed an arrayref, set up batch request
+        if ($self->_api_version ne +SQS_VERSION_2011_10_01) {
+            carp "Batch $type not supported in this API version";
+        }
+        my $argref = shift;
+        my %defaults = @_;
+        my %params;
+        my $i = 1;
+        foreach my $element (@$argref) {
+            if (ref $element eq 'ARRAY') {
+                foreach my $name (@{$argnames{$type}}) {
+                    $params{"${type}BatchRequestEntry.$i.$name"} = shift @$element;
+                }
+                %defaults = (%defaults, @$element);
+                foreach my $name (keys %defaults) {
+                    $params{"${type}BatchRequestEntry.$i.$name"} = $defaults{$name};
+                }
+            } else {
+                my $name = $argnames{$type}[0];
+                $params{"${type}BatchRequestEntry.$i.$name"} = $element;
+                foreach my $name (keys %defaults) {
+                    $params{"${type}BatchRequestEntry.$i.$name"} = $defaults{$name};
+                }
+            }
+            if (exists $params{"${type}BatchRequestEntry.$i.Id"}) {
+                $params{"${type}BatchRequestEntry.$i.Id"} = chr(ord('a') + $i - 1) . '_' . $params{"${type}BatchRequestEntry.$i.Id"};
+            } else {
+                $uuid_generator ||= new Data::UUID;
+                $params{"${type}BatchRequestEntry.$i.Id"} = chr(ord('a') + $i - 1) . '_' . $uuid_generator->create_str();
+            }
+        } continue {
+            $i++;
+        }
+        $params{Action} = "${type}Batch";
+        return %params;
+    }
+}
+}
+
 1;
 
 __END__
@@ -236,10 +297,30 @@ Get the endpoint for the queue.
 
 Deletes the queue. Any messages contained in the queue will be lost.
 
-=item B<SendMessage($message, [%opts])>
+=item B<SendMessage($message, [%opts])>  OR  B<SendMessage(ARRAYREF, [%opts])>
 
-Sends the message. The message can be up to 8KB in size and should be
-plain text.
+Sends the message and returns an C<Amazon::SQS::Simple::SendResponse>
+object. The message can be up to 64KiB in size and should be plain text.
+
+If $message is a reference to an array, then SendMessage will make
+a batch request, sending up to 10 messages in a single call, eg
+
+    SendMessage(['one', 'two', 'three'])
+
+If $message is an array of arrays, distinct options can be applied to
+each message, each overriding any %opts argument to SendMessage:
+
+    SendMessage([
+                    ['one', DelaySeconds => 1],    # delay of 1 sec
+                    ['two', DelaySeconds => 2],    # delay of 2 sec
+                    ['three'],                     # delay of 3 sec
+                ], DelaySeconds => 3)
+
+The response object returned by a batch request has special properties.  See
+L<Amazon::SQS::Simple::Message> for more details.
+
+Note that for batch requests, the total size of the combined requests may
+not exceed the 64KiB limit.
 
 Options for SendMessage:
 
@@ -248,7 +329,15 @@ Options for SendMessage:
 =item * DelaySeconds => NUMBER
 
 Number of seconds to delay before the message becomes available for
-processing.  NOT SUPPORTED IN APIs EARLIER THAN 2011-10-01
+processing.  NOT SUPPORTED IN APIs EARLIER THAN 2011-10-01.
+
+=item * Id => STRING
+
+Suffix of unique identifiers attached to each subrequest of a batch
+operation.  If this is not supplied, unique identifiers are generated
+automatically.  In either case, identifiers will sort lexicographically
+in the order of the original request. NOT SUPPORTED IN APIs EARLIER THAN
+2011-10-01.
 
 =back
 

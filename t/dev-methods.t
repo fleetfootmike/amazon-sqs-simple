@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 39;
+use Test::More tests => 42;
 use Digest::MD5 qw(md5_hex);
 
 BEGIN { use_ok('Amazon::SQS::Simple'); }
@@ -161,6 +161,28 @@ my @messages = $q->ReceiveMessage(MaxNumberOfMessages => 10);
 
 ok(UNIVERSAL::isa($messages[0], 'Amazon::SQS::Simple::Message')
  , 'Calling ReceiveMessage with MaxNumberOfMessages returns array of Amazon::SQS::Simple::Message objects');
+
+my @list = qw(one two three);
+my %list = map { $_ => 1 } @list;
+$response = $q->SendMessage(\@list);
+ok($response->is_success(), 'Batch SendMessage is successful');
+ok($response->is_batch(), 'SendResponse is_batch method returns true for a batch request');
+
+my $received_multi;
+$iteration++;
+while (!defined($received_multi) && $iteration < 4) {
+    sleep 2;
+    $received_multi = $q->ReceiveMessage();
+    $iteration++;
+}
+while (defined $received_multi) {
+    my $body = $received_multi->MessageBody;
+    delete $list{$body} if exists $list{$body};
+    last unless %list;
+} continue {
+    $received_multi = $q->ReceiveMessage();
+}
+ok(!(scalar keys %list), 'All messages from batch SendMessage were received');
 
 #################################################
 #### Changing message visibility
