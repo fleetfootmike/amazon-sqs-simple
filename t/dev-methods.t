@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 36;
+use Test::More tests => 39;
 use Digest::MD5 qw(md5_hex);
 
 BEGIN { use_ok('Amazon::SQS::Simple'); }
@@ -109,6 +109,17 @@ ok(
 $response = $q->ReceiveMessage();
 ok(!defined($response), 'ReceiveMessage called on empty queue returns undef');
 
+# test delayed messages first, because it is convenient to have an empty queue
+my $delay = 60;
+$response = $q->SendMessage($messages{GET}, DelaySeconds => $delay);
+ok($response->MessageId, 'Got MessageId when sending delayed message');
+sleep int($delay / 2);
+my $received_msg = $q->ReceiveMessage();
+ok(!defined($received_msg), 'Delayed message should be unavailable halfway through the delay period');
+sleep int($delay / 2) + 15;
+$received_msg = $q->ReceiveMessage();
+ok((defined $received_msg and $received_msg->MessageBody eq $messages{GET}), 'Delayed message became available after the delay period');
+
 foreach my $msg_type (keys %messages) {
     my $msg = $messages{$msg_type};
     $response = $q->SendMessage($msg);
@@ -124,7 +135,7 @@ foreach my $msg_type (keys %messages) {
         or diag("Looking for " . md5_hex($msg) . ", got " . $response->MD5OfMessageBody);
 }
 
-my $received_msg = $q->ReceiveMessage(Attributes => 'All');
+$received_msg = $q->ReceiveMessage(Attributes => 'All');
 $iteration = 1;
 
 while (!defined($received_msg) && $iteration < 4) {
