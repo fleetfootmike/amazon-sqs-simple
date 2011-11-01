@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 35;
+use Test::More tests => 36;
 use Digest::MD5 qw(md5_hex);
 
 BEGIN { use_ok('Amazon::SQS::Simple'); }
@@ -124,7 +124,7 @@ foreach my $msg_type (keys %messages) {
         or diag("Looking for " . md5_hex($msg) . ", got " . $response->MD5OfMessageBody);
 }
 
-my $received_msg = $q->ReceiveMessage();
+my $received_msg = $q->ReceiveMessage(Attributes => 'All');
 $iteration = 1;
 
 while (!defined($received_msg) && $iteration < 4) {
@@ -140,6 +140,7 @@ ok(!$@, "Interpolating Amazon::SQS::Simple::Message object in string context");
 
 ok(UNIVERSAL::isa($received_msg, 'Amazon::SQS::Simple::Message'), 'ReceiveMessage returns Amazon::SQS::Simple::Message object');
 ok((grep {$_ eq $received_msg->MessageBody} values %messages), 'ReceiveMessage returned one of the messages we wrote');
+ok(($received_msg->SenderId =~ m{^[\d\.]+$}), 'ReceiveMessage returned attributes');
 
 for (1..10) {
     $q->SendMessage($_);

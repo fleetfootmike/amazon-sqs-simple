@@ -41,6 +41,21 @@ sub ReceiveMessage {
     my ($self, %params) = @_;
     
     $params{Action} = 'ReceiveMessage';
+
+    if ($params{Attributes}) {
+        if ($self->_api_version eq +SQS_VERSION_2008_01_01) {
+            carp "Attributes on ReceiveMessage not supported in this API version";
+        } else {
+            my @attributes = split /\s*,\s*/, $params{Attributes};
+            delete $params{Attributes};
+            my $i = 1;
+            foreach my $name (@attributes) {
+                $params{"AttributeName.$i"}=$name;
+            } continue {
+                $i++;
+            }
+        }
+    }
     
     my $href = $self->_dispatch(\%params, [qw(Message)]);
 
@@ -260,6 +275,11 @@ and 10 inclusive. Default is 1.
 
 The duration (in seconds) that the received messages are hidden from
 subsequent retrieve requests.
+
+=item * Attributes => E<lt> All | SenderId | SentTimestamp | ApproximateReceiveCount | ApproximateFirstReceiveTimestamp E<gt>
+
+A comma-separated list of attributes to be returned in the
+C<Amazon::SQS::Simple::Message> object.
 
 =back
 
