@@ -5,6 +5,7 @@ use warnings;
 use Amazon::SQS::Simple::Message;
 use Amazon::SQS::Simple::SendResponse;
 use Carp qw( croak carp );
+use Data::UUID;
 
 use base 'Amazon::SQS::Simple::Base';
 use Amazon::SQS::Simple::Base; # for constants
@@ -26,14 +27,13 @@ sub Delete {
 sub SendMessage {
     my ($self, $message, %params) = @_;
     
-    $params{Action} = 'SendMessage';
-    $params{MessageBody} = $message;
-    
+    %params = $self->_arrange_params('SendMessage', $message, %params);
+
     my $href = $self->_dispatch(\%params);    
 
     # default to most recent version
     return new Amazon::SQS::Simple::SendResponse(
-        $href->{SendMessageResult}
+        $href->{SendMessageResult} || $href->{SendMessageBatchResult}
     );
 }
 
@@ -41,6 +41,21 @@ sub ReceiveMessage {
     my ($self, %params) = @_;
     
     $params{Action} = 'ReceiveMessage';
+
+    if ($params{Attributes}) {
+        if ($self->_api_version eq +SQS_VERSION_2008_01_01) {
+            carp "Attributes on ReceiveMessage not supported in this API version";
+        } else {
+            my @attributes = split /\s*,\s*/, $params{Attributes};
+            delete $params{Attributes};
+            my $i = 1;
+            foreach my $name (@attributes) {
+                $params{"AttributeName.$i"}=$name;
+            } continue {
+                $i++;
+            }
+        }
+    }
     
     my $href = $self->_dispatch(\%params, [qw(Message)]);
 
@@ -68,8 +83,7 @@ sub ReceiveMessage {
 sub DeleteMessage {
     my ($self, $receipt_handle, %params) = @_;
     
-    $params{Action} = 'DeleteMessage';
-    $params{ReceiptHandle} = $receipt_handle;
+    %params = $self->_arrange_params('DeleteMessage', $receipt_handle, %params);
     
     my $href = $self->_dispatch(\%params);
 }
@@ -81,13 +95,12 @@ sub ChangeMessageVisibility {
         carp "ChangeMessageVisibility not supported in this API version";
     }
     else {
+        # todo: bounds checking is not done if subrequest of batch operation takes different timeout
         if (!defined($timeout) || $timeout =~ /\D/ || $timeout < 0 || $timeout > 43200) {
             croak "timeout must be specified and in range 0..43200";
         }
 
-        $params{Action}             = 'ChangeMessageVisibility';
-        $params{ReceiptHandle}      = $receipt_handle;
-        $params{VisibilityTimeout}  = $timeout;
+        %params = $self->_arrange_params('ChangeMessageVisibility', $receipt_handle, $timeout, %params);
 
         my $href = $self->_dispatch(\%params);
     }
@@ -175,6 +188,74 @@ sub _to_string {
     return $self->Endpoint();
 }
 
+{
+my $uuid_generator;
+sub _arrange_params {
+
+    my %argnames = (
+                    SendMessage             => [ ("MessageBody"                       ) ],
+                    DeleteMessage           => [ ("ReceiptHandle"                     ) ],
+                    ChangeMessageVisibility => [ ("ReceiptHandle", "VisibilityTimeout") ],
+                  );
+
+    my $self = shift;
+    my $type = shift;
+    unless (ref $_[0] eq 'ARRAY') {
+
+        # the usual case, non-batch
+        my %args;
+        foreach my $name (@{$argnames{$type}}) {
+            $args{$name} = shift;
+        }
+        my %params = (@_, %args, Action => $type);
+        return %params;
+
+    } else {
+
+        # user passed an arrayref, set up batch request
+        if ($self->_api_version ne +SQS_VERSION_2011_10_01) {
+            carp "Batch $type not supported in this API version";
+        }
+        my $argref = shift;
+        my %implicit_defaults;
+        foreach my $name (@{$argnames{$type}}) {
+            next if $name eq $argnames{$type}[0];       # the first argument has already been taken into $argref
+            $implicit_defaults{$name} = shift;
+        }
+        my %defaults = (@_, %implicit_defaults);
+        my %params;
+        my $i = 1;
+        foreach my $element (@$argref) {
+            if (ref $element eq 'ARRAY') {
+                foreach my $name (@{$argnames{$type}}) {
+                    $params{"${type}BatchRequestEntry.$i.$name"} = shift @$element;
+                }
+                %defaults = (%defaults, @$element);
+                foreach my $name (keys %defaults) {
+                    $params{"${type}BatchRequestEntry.$i.$name"} = $defaults{$name};
+                }
+            } else {
+                my $name = $argnames{$type}[0];
+                $params{"${type}BatchRequestEntry.$i.$name"} = $element;
+                foreach my $name (keys %defaults) {
+                    $params{"${type}BatchRequestEntry.$i.$name"} = $defaults{$name};
+                }
+            }
+            if (exists $params{"${type}BatchRequestEntry.$i.Id"}) {
+                $params{"${type}BatchRequestEntry.$i.Id"} = chr(ord('a') + $i - 1) . '_' . $params{"${type}BatchRequestEntry.$i.Id"};
+            } else {
+                $uuid_generator ||= new Data::UUID;
+                $params{"${type}BatchRequestEntry.$i.Id"} = chr(ord('a') + $i - 1) . '_' . $uuid_generator->create_str();
+            }
+        } continue {
+            $i++;
+        }
+        $params{Action} = "${type}Batch";
+        return %params;
+    }
+}
+}
+
 1;
 
 __END__
@@ -221,10 +302,49 @@ Get the endpoint for the queue.
 
 Deletes the queue. Any messages contained in the queue will be lost.
 
-=item B<SendMessage($message, [%opts])>
+=item B<SendMessage($message, [%opts])>  OR  B<SendMessage(ARRAYREF, [%opts])>
 
-Sends the message. The message can be up to 8KB in size and should be
-plain text.
+Sends the message and returns an C<Amazon::SQS::Simple::SendResponse>
+object. The message can be up to 64KiB in size and should be plain text.
+
+If $message is a reference to an array, then SendMessage will make
+a batch request, sending up to 10 messages in a single call, eg
+
+    SendMessage(['one', 'two', 'three'])
+
+If $message is an array of arrays, distinct options can be applied to
+each message, each overriding any %opts argument to SendMessage:
+
+    SendMessage([
+                    ['one', DelaySeconds => 1],    # delay of 1 sec
+                    ['two', DelaySeconds => 2],    # delay of 2 sec
+                    ['three'],                     # delay of 3 sec
+                ], DelaySeconds => 3)
+
+The response object returned by a batch request has special properties.  See
+L<Amazon::SQS::Simple::Message> for more details.
+
+Note that for batch requests, the total size of the combined requests may
+not exceed the 64KiB limit.
+
+Options for SendMessage:
+
+=over 4
+
+=item * DelaySeconds => NUMBER
+
+Number of seconds to delay before the message becomes available for
+processing.  NOT SUPPORTED IN APIs EARLIER THAN 2011-10-01.
+
+=item * Id => STRING
+
+Suffix of unique identifiers attached to each subrequest of a batch
+operation.  If this is not supplied, unique identifiers are generated
+automatically.  In either case, identifiers will sort lexicographically
+in the order of the original request. NOT SUPPORTED IN APIs EARLIER THAN
+2011-10-01.
+
+=back
 
 =item B<ReceiveMessage([%opts])>
 
@@ -245,18 +365,54 @@ Options for ReceiveMessage:
 Maximum number of messages to return. Value should be an integer between 1
 and 10 inclusive. Default is 1. 
 
+=item * VisibilityTimeout => NUMBER
+
+The duration (in seconds) that the received messages are hidden from
+subsequent retrieve requests.
+
+=item * Attributes => E<lt> All | SenderId | SentTimestamp | ApproximateReceiveCount | ApproximateFirstReceiveTimestamp E<gt>
+
+A comma-separated list of attributes to be returned in the
+C<Amazon::SQS::Simple::Message> object.
+
 =back
 
-=item B<DeleteMessage($receipt_handle, [%opts])>
+=item B<DeleteMessage($receipt_handle, [%opts])>  OR  B<DeleteMessage(ARRAYREF, [%opts])>
 
-Delete the message with the specified receipt handle from the queue
+Delete the message with the specified receipt handle from the queue.
 
-=item B<ChangeMessageVisibility($receipt_handle, $timeout, [%opts])>
+If $receipt_handle is a reference to an array, then DeleteMessage will
+make a batch request, deleting multiple messages in a single call, eg
+
+    DeleteMessage([$rhandle1, $rhandle2, $rhandle3])
+
+If $receipt_handle is reference to an array of arrays, distinct options can
+be applied to each sub-request, each overriding any %opts argument to
+DeleteMessage.  However, there are no options for DeleteMessage as of the
+2011-10-01 API.
+
+=item B<ChangeMessageVisibility($receipt_handle, $timeout, [%opts])>  OR  B<ChangeMessageVisibility(ARRAYREF, $timeout, [%opts])>
 
 NOT SUPPORTED IN APIs EARLIER THAN 2009-01-01
 
 Changes the visibility of the message with the specified receipt handle to
 C<$timeout> seconds. C<$timeout> must be in the range 0..43200.
+
+If $receipt_handle is a reference to an array, then ChangeMessageVisibility
+will make a batch request, changing the visibility of multiple messages in a
+single call, eg:
+
+    ChangeMessageVisibility([$rhandle1, $rhandle2, $rhandle3], 60)
+
+If $receipt_handle is reference to an array of arrays, each child array must
+contain two elements, the second element being a distinct timeouts for each
+message which overrides the default timeout:
+
+    ChangeMessageVisibility([
+                             [$rhandle1, 10],
+                             [$rhandle2, 20],
+                             [$rhandle3, 30],
+                            ], 60)
 
 =item B<AddPermission($label, $account_actions, [%opts])>
 
@@ -282,16 +438,47 @@ attribute names are returned:
 
 =over 4
 
+=item * ApproximateNumberOfMessages
+
+=item * ApproximateNumberOfMessagesDelayed
+
+=item * ApproximateNumberOfMessagesNotVisible
+
+=item * CreatedTimestamp
+
+=item * DelaySeconds
+
+=item * LastModifiedTimestamp
+
+=item * MaximumMessageSize
+
+=item * MessageRetentionPeriod
+
+=item * Policy
+
+=item * QueueArn
+
 =item * VisibilityTimeout
 
-=item * ApproximateNumberOfMessages
+Not all attributes are available with API versions earlier than
+2011-10-01.  See the AWS SQS API documentation for more details.
 
 =back
 
 =item B<SetAttribute($attribute_name, $attribute_value, [%opts])>
 
-Sets the value for a queue attribute. Currently the only valid
-attribute name is C<VisibilityTimeout>.
+Sets the value for a queue attribute. The settable attribute names are
+
+=item * MaximumMessageSize
+
+=item * MessageRetentionPeriod
+
+=item * Policy
+
+=item * VisibilityTimeout
+
+Not all attributes are available with API versions earlier than
+2011-10-01.  See the AWS SQS API documentation for more details.
 
 =back
 

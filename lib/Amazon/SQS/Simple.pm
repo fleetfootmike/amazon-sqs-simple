@@ -3,7 +3,7 @@ package Amazon::SQS::Simple;
 use strict;
 use warnings;
 
-use Carp qw( croak );
+use Carp qw( croak carp );
 use Amazon::SQS::Simple::Base; # for constants
 use Amazon::SQS::Simple::Queue;
 use base qw(Exporter Amazon::SQS::Simple::Base);
@@ -21,6 +21,27 @@ sub GetQueue {
 
 sub CreateQueue {
     my ($self, $queue_name, %params) = @_;
+
+    if ($self->_api_version eq +SQS_VERSION_2011_10_01) {
+        if (exists $params{DevaultVisibilityTimeout}) {
+            $params{VisibilityTimeout} = $params{DefaultVisibilityTimeout};
+            delete $params{DefaultVisibilityTimeout};
+        }
+        my $i = 1;
+        foreach my $name (keys %params) {
+            my $value = $params{$name};
+            delete $params{$name};
+            $params{"Attribute.$i.Name"}=$name;
+            $params{"Attribute.$i.Value"}=$value;
+        } continue {
+            $i++;
+        }
+    } else {
+        if (exists $params{VisibilityTimeout}) {
+            $params{DevaultVisibilityTimeout} = $params{VisibilityTimeout};
+            delete $params{VisibilityTimeout};
+        }
+    }
     
     $params{Action}    = 'CreateQueue';
     $params{QueueName} = $queue_name;
@@ -30,7 +51,8 @@ sub CreateQueue {
     if ($href->{CreateQueueResult}{QueueUrl}) {
         return Amazon::SQS::Simple::Queue->new(
             %$self,
-            Endpoint => $href->{CreateQueueResult}{QueueUrl},
+            Endpoint  => $href->{CreateQueueResult}{QueueUrl},
+            QueueName => $queue_name,
         );
     }
 }
@@ -56,6 +78,20 @@ sub ListQueues {
     else {
         return undef;
     }
+}
+
+sub GetQueueUrl {
+    my ($self,$queue_name, %params) = @_;
+
+    if ($self->_api_version ne +SQS_VERSION_2011_10_01) {
+        carp "GetQueueUrl not supported in this API version";
+    }
+
+    $params{Action}     = 'GetQueueUrl';
+    $params{QueueName}  = $queue_name;
+
+    my $href = $self->_dispatch(\%params);
+    return $href->{GetQueueUrlResult}{QueueUrl};
 }
 
 sub timestamp {
@@ -104,7 +140,7 @@ Amazon::SQS::Simple is an OO API for the Amazon Simple Queue Service.
 =head1 IMPORTANT
 
 This version of Amazon::SQS::Simple defaults to work against version
-2009-02-01 of the SQS API.
+2011-10-01 of the SQS API.
 
 Earlier API versions may or may not work.  
 
@@ -156,9 +192,32 @@ Options for CreateQueue:
 
 =over 4
 
-=item DefaultVisibilityTimeout => SECONDS
+=item VisibilityTimeout => SECONDS
 
-Set the default visibility timeout for this queue
+The default visibility timeout for this queue.  This option was known as
+C<DefaultVisibilityTimeout> prior to API version 2011-10-01.  Both variants
+are accepted as synonyms.
+
+=item Policy => JSON-STRING
+
+The formal description of the permissions for a resource. For more
+information about Policy, see Basic Policy Structure in the Amazon SQS
+Developer Guide.  NOT SUPPORTED IN APIs EARLIER THAN 2011-10-01.
+
+=item MaximumMessageSize => BYTES
+
+How many bytes a message may comprise.  NOT SUPPORTED IN APIs EARLIER THAN
+2011-10-01.
+
+=item MessageRetentionPeriod => SECONDS
+
+How long the queue retains a message.  NOT SUPPORTED IN APIs EARLIER THAN
+2011-10-01.
+
+=item DelaySeconds => SECONDS
+
+How long to delay each new message before it becomes available to
+ReceiveMessage.   NOT SUPPORTED IN APIs EARLIER THAN 2011-10-01.
 
 =back
 
@@ -174,6 +233,27 @@ Options for ListQueues:
 =item QueueNamePrefix => STRING
 
 Only those queues whose name begins with the specified string are returned.
+
+=back
+
+=item GetQueueUrl($queue_name, [%opts])
+
+Gets the Uniform Resource Locater (URL) of a queue. Returns a scalar value,
+C<undef> on failure.
+
+If an C<Amazon::SQS::Simple::Queue> object has been created, the URL for
+that queue is available from the C<Endpoint> method.  The C<Endpoint> method
+call is preferred where possible because it does not require an HTTP
+request. (See L<Amazon::SQS::Simple::Queue> for details.)
+
+Options for CreateQueue:
+
+=over 4
+
+=item QueueOwnerAWSAccountId => STRING
+
+Access a queue belonging to another AWS account, if that queue's owner has
+granted the necessary permissions.
 
 =back
 

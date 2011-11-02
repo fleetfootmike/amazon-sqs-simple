@@ -10,6 +10,12 @@ sub new {
     my $msg = shift;
     my $version = shift || $Amazon::SQS::Simple::Base::DEFAULT_SQS_VERSION;
     $msg->{Version} = $version;
+    if (ref $msg->{Attribute} eq 'ARRAY') {
+        foreach my $att (@{$msg->{Attribute}}) {
+            $msg->{$att->{Name}}=$att->{Value};
+        }
+        delete $msg->{Attribute};
+    }
     return bless ($msg, $class);
 }
 
@@ -31,6 +37,26 @@ sub MessageId {
 sub ReceiptHandle {
     my $self = shift;
     return $self->{ReceiptHandle};
+}
+
+sub SenderId {
+    my $self = shift;
+    return $self->{SenderId};
+}
+
+sub SentTimestamp {
+    my $self = shift;
+    return $self->{SentTimestamp};
+}
+
+sub ApproximateReceiveCount {
+    my $self = shift;
+    return $self->{ApproximateReceiveCount};
+}
+
+sub ApproximateFirstReceiveTimestamp {
+    my $self = shift;
+    return $self->{ApproximateFirstReceiveTimestamp};
 }
 
 1;
@@ -67,6 +93,26 @@ Get the MD5 checksum of the message body
 =item B<ReceiptHandle()>
 
 Get the receipt handle for the message (used as an argument to DeleteMessage)
+
+=item B<SenderId()>
+
+Get the AWS account number (if this attribute was requested in
+ReceiveMessage)
+
+=item B<SentTimestamp()>
+
+Get the time when the message was sent (if this attribute was requested in
+ReceiveMessage)
+
+=item B<ApproximateReceiveCount()>
+
+Get the number of times a message has been received but not deleted (if this
+attribute was requested in ReceiveMessage)
+
+=item B<ApproximateFirstReceiveTimestamp()>
+
+Get the time when the message was first received (if this attribute was
+requested in ReceiveMessage)
 
 =back
 
