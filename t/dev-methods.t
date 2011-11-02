@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 44;
+use Test::More tests => 45;
 use Digest::MD5 qw(md5_hex);
 
 BEGIN { use_ok('Amazon::SQS::Simple'); }
@@ -252,6 +252,17 @@ SKIP: {
 
 eval { $q->DeleteMessage($received_msg->ReceiptHandle); };
 ok(!$@, 'DeleteMessage on ReceiptHandle of received message') or diag($@);
+
+my $batch_size = 3;
+my @batch_handles;
+for (1 .. $batch_size) {
+    sleep 2;
+    my $msg = eval { $q->ReceiveMessage() };
+    redo unless defined $msg;
+    push @batch_handles, $msg->ReceiptHandle();
+}
+eval { $response = $q->DeleteMessage(\@batch_handles) };
+ok(scalar @{$response->{DeleteMessageBatchResult}{DeleteMessageBatchResultEntry}} == $batch_size, 'All messages from batch DeleteMessage were removed');
 
 #################################################
 #### Deleting a queue

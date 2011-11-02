@@ -279,8 +279,10 @@ sub _escape_params {
     # Need to escape + characters in signature
     # see http://docs.amazonwebservices.com/AWSSimpleQueueService/2006-04-01/Query_QueryAuth.html
     # Likewise, need to escape + characters in ReceiptHandle
-    foreach my $key (qw(Signature MessageBody ReceiptHandle)) {
-        $params->{$key} = uri_escape($params->{$key}, '^A-Za-z0-9-_.~') if exists $params->{$key};
+    my $to_escape = qr{^(?:Signature|MessageBody|ReceiptHandle)|\.\d+\.(?:MessageBody|ReceiptHandle)$};
+    foreach my $key (keys %$params) {
+        next unless $key =~ m/$to_escape/;
+        $params->{$key} = uri_escape($params->{$key}, '^A-Za-z0-9-_.~');
     }
     return $params;
 }

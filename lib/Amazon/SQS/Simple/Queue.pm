@@ -83,8 +83,7 @@ sub ReceiveMessage {
 sub DeleteMessage {
     my ($self, $receipt_handle, %params) = @_;
     
-    $params{Action} = 'DeleteMessage';
-    $params{ReceiptHandle} = $receipt_handle;
+    %params = $self->_arrange_params('DeleteMessage', $receipt_handle, %params);
     
     my $href = $self->_dispatch(\%params);
 }
@@ -196,6 +195,7 @@ sub _arrange_params {
 
     my %argnames = (
                     SendMessage             => [ ("MessageBody"                       ) ],
+                    DeleteMessage           => [ ("ReceiptHandle"                     ) ],
                   );
 
     my $self = shift;
@@ -372,9 +372,19 @@ C<Amazon::SQS::Simple::Message> object.
 
 =back
 
-=item B<DeleteMessage($receipt_handle, [%opts])>
+=item B<DeleteMessage($receipt_handle, [%opts])>  OR  B<DeleteMessage(ARRAYREF, [%opts])>
 
-Delete the message with the specified receipt handle from the queue
+Delete the message with the specified receipt handle from the queue.
+
+If $receipt_handle is a reference to an array, then DeleteMessage will
+make a batch request, deleting multiple messages in a single call, eg
+
+    DeleteMessage([$rhandle1, $rhandle2, $rhandle3])
+
+If $receipt_handle is reference to an array of arrays, distinct options can
+be applied to each sub-request, each overriding any %opts argument to
+DeleteMessage.  However, there are no options for DeleteMessage as of the
+2011-10-01 API.
 
 =item B<ChangeMessageVisibility($receipt_handle, $timeout, [%opts])>
 
