@@ -95,13 +95,12 @@ sub ChangeMessageVisibility {
         carp "ChangeMessageVisibility not supported in this API version";
     }
     else {
+        # todo: bounds checking is not done if subrequest of batch operation takes different timeout
         if (!defined($timeout) || $timeout =~ /\D/ || $timeout < 0 || $timeout > 43200) {
             croak "timeout must be specified and in range 0..43200";
         }
 
-        $params{Action}             = 'ChangeMessageVisibility';
-        $params{ReceiptHandle}      = $receipt_handle;
-        $params{VisibilityTimeout}  = $timeout;
+        %params = $self->_arrange_params('ChangeMessageVisibility', $receipt_handle, $timeout, %params);
 
         my $href = $self->_dispatch(\%params);
     }
@@ -196,6 +195,7 @@ sub _arrange_params {
     my %argnames = (
                     SendMessage             => [ ("MessageBody"                       ) ],
                     DeleteMessage           => [ ("ReceiptHandle"                     ) ],
+                    ChangeMessageVisibility => [ ("ReceiptHandle", "VisibilityTimeout") ],
                   );
 
     my $self = shift;
@@ -217,7 +217,12 @@ sub _arrange_params {
             carp "Batch $type not supported in this API version";
         }
         my $argref = shift;
-        my %defaults = @_;
+        my %implicit_defaults;
+        foreach my $name (@{$argnames{$type}}) {
+            next if $name eq $argnames{$type}[0];       # the first argument has already been taken into $argref
+            $implicit_defaults{$name} = shift;
+        }
+        my %defaults = (@_, %implicit_defaults);
         my %params;
         my $i = 1;
         foreach my $element (@$argref) {
@@ -386,12 +391,28 @@ be applied to each sub-request, each overriding any %opts argument to
 DeleteMessage.  However, there are no options for DeleteMessage as of the
 2011-10-01 API.
 
-=item B<ChangeMessageVisibility($receipt_handle, $timeout, [%opts])>
+=item B<ChangeMessageVisibility($receipt_handle, $timeout, [%opts])>  OR  B<ChangeMessageVisibility(ARRAYREF, $timeout, [%opts])>
 
 NOT SUPPORTED IN APIs EARLIER THAN 2009-01-01
 
 Changes the visibility of the message with the specified receipt handle to
 C<$timeout> seconds. C<$timeout> must be in the range 0..43200.
+
+If $receipt_handle is a reference to an array, then ChangeMessageVisibility
+will make a batch request, changing the visibility of multiple messages in a
+single call, eg:
+
+    ChangeMessageVisibility([$rhandle1, $rhandle2, $rhandle3], 60)
+
+If $receipt_handle is reference to an array of arrays, each child array must
+contain two elements, the second element being a distinct timeouts for each
+message which overrides the default timeout:
+
+    ChangeMessageVisibility([
+                             [$rhandle1, 10],
+                             [$rhandle2, 20],
+                             [$rhandle3, 30],
+                            ], 60)
 
 =item B<AddPermission($label, $account_actions, [%opts])>
 

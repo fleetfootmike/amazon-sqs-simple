@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 45;
+use Test::More tests => 47;
 use Digest::MD5 qw(md5_hex);
 
 BEGIN { use_ok('Amazon::SQS::Simple'); }
@@ -253,6 +253,9 @@ SKIP: {
 eval { $q->DeleteMessage($received_msg->ReceiptHandle); };
 ok(!$@, 'DeleteMessage on ReceiptHandle of received message') or diag($@);
 
+#################################################
+#### Batch operations on ReceiptHandles
+
 my $batch_size = 3;
 my @batch_handles;
 for (1 .. $batch_size) {
@@ -261,6 +264,22 @@ for (1 .. $batch_size) {
     redo unless defined $msg;
     push @batch_handles, $msg->ReceiptHandle();
 }
+
+eval { $response = $q->ChangeMessageVisibility(\@batch_handles, 10) };
+ok(scalar @{$response->{ChangeMessageVisibilityBatchResult}{ChangeMessageVisibilityBatchResultEntry}} == $batch_size, 'All messages from batch ChangeMessageVisibility were updated');
+
+# todo, check the individual visibility values
+eval { $response = $q->ChangeMessageVisibility([ [ $batch_handles[0], 10 ], [ $batch_handles[1], 20 ] ], 30) };
+ok(scalar @{$response->{ChangeMessageVisibilityBatchResult}{ChangeMessageVisibilityBatchResultEntry}} == 2, 'Alternate invocation form for batch ChangeMessageVisibility');
+
+# todo, this test works, but hide carp output
+# push @batch_handles, "nonexistent_handle";
+# eval { $response = $q->ChangeMessageVisibility(\@batch_handles, 30) };
+# ok((scalar @{$response->{ChangeMessageVisibilityBatchResult}{ChangeMessageVisibilityBatchResultEntry}} == $batch_size and
+#     scalar @{$response->{ChangeMessageVisibilityBatchResult}{BatchResultErrorEntry}} == 1),
+#    'Error caught correctly on batch ChangeMessageVisibility');
+# pop @batch_handles;
+
 eval { $response = $q->DeleteMessage(\@batch_handles) };
 ok(scalar @{$response->{DeleteMessageBatchResult}{DeleteMessageBatchResultEntry}} == $batch_size, 'All messages from batch DeleteMessage were removed');
 
