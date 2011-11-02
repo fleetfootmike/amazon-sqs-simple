@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 33;
+use Test::More tests => 35;
 use Digest::MD5 qw(md5_hex);
 
 BEGIN { use_ok('Amazon::SQS::Simple'); }
@@ -214,3 +214,26 @@ ok(!$@, 'DeleteMessage on ReceiptHandle of received message') or diag($@);
 
 eval { $q->Delete(); };
 ok(!$@, 'Delete on non-empty queue') or diag($@);
+
+#################################################
+#### Version 1 signatures
+
+$sqs = new Amazon::SQS::Simple(
+    $ENV{AWS_ACCESS_KEY},
+    $ENV{AWS_SECRET_KEY},
+    Timeout => 20,
+    SignatureVersion => 1,
+    # _Debug => \*STDERR,
+);
+
+isa_ok($sqs, 'Amazon::SQS::Simple', "[$$] Amazon::SQS::Simple object created successfully with SignatureVersion 1");
+
+$queue_name  = "_test_queue_v1_$$";
+
+$q = $sqs->CreateQueue($queue_name);
+ok(
+    $q
+ && $q->Endpoint()
+ && $q->Endpoint() =~ m{/$queue_name$}
+ , "CreateQueue returned a queue with SignatureVersion 1 (name was $queue_name)"
+);
