@@ -11,6 +11,7 @@ WriteMakefile(
     PREREQ_PM => {
         'Test::More'        => 0,
         'Digest::HMAC_SHA1' => 0,
+        'Digest::SHA'       => 0,
         'LWP::UserAgent'    => 0,
         'MIME::Base64'      => 0,
         'URI::Escape'       => 0,
