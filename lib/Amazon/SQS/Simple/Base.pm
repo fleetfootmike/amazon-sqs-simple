@@ -9,6 +9,7 @@ use LWP::UserAgent;
 use MIME::Base64;
 use URI::Escape;
 use XML::Simple;
+use Encode qw(encode);
 
 use base qw(Exporter);
 
@@ -20,6 +21,7 @@ use constant MAX_GET_MSG_SIZE       => 4096; # Messages larger than this size wi
                                        
 our $DEFAULT_SQS_VERSION = +SQS_VERSION_2009_02_01;
 our @EXPORT = qw(SQS_VERSION_2009_02_01 SQS_VERSION_2008_01_01);
+our $URI_SAFE_CHARACTERS = '^A-Za-z0-9-_.~'; # defined by AWS, same as URI::Escape defaults
 
 sub new {
     my $class = shift;
@@ -93,13 +95,13 @@ sub _dispatch {
     if ($post_request) {
         $response = $ua->post(
             $url, 
-            'Content-type' => 'application/x-www-form-urlencoded', 
+            'Content-Type' => 'application/x-www-form-urlencoded;charset=utf-8',
             'Content'      => $query,
             @auth_headers,
         );
     }
     else {
-        $response = $ua->get("$url/?$query", @auth_headers);
+        $response = $ua->get("$url/?$query", "Content-Type" => "text/plain;charset=utf-8", @auth_headers);
     }
         
     if ($response->is_success) {
@@ -192,7 +194,9 @@ sub _sign_query_v2 {
     my $to_sign;
     for my $key( sort keys %$params ) {
         $to_sign .= '&' if $to_sign;
-        $to_sign .= uri_escape($key) . '=' . uri_escape($params->{$key});
+        my $key_octets   = encode('utf-8-strict', $key);
+        my $value_octets = encode('utf-8-strict', $params->{$key});
+        $to_sign .= uri_escape($key_octets, $URI_SAFE_CHARACTERS) . '=' . uri_escape($value_octets, $URI_SAFE_CHARACTERS);
     }
 
     my $verb = "GET";
@@ -203,8 +207,8 @@ sub _sign_query_v2 {
         $path = "$1";
         $path .= '/' unless $post_request; # why is this not in the spec?
     }
-    $to_sign = "$verb\n$host\n$path\n$to_sign";
 
+    $to_sign = "$verb\n$host\n$path\n$to_sign";
     $params->{Signature} = encode_base64(hmac_sha256($to_sign, $self->{SecretKey}),'');
     return $params;
 }
@@ -231,7 +235,9 @@ sub _sign_query_v3 {
     #     my $query;
     #     for my $key ( sort keys %$params ) {
     #         $query .= '&' if $query;
-    #         $query .= uri_escape($key) . '=' . uri_escape($params->{$key});
+    #         my $key_octets   = encode('utf-8-strict', $key);
+    #         my $value_octets = encode('utf-8-strict', $params->{$key});
+    #         $query .= uri_escape($key_octets, $URI_SAFE_CHARACTERS) . '=' . uri_escape($value_octets, $URI_SAFE_CHARACTERS);
     #     }
     #     my $verb = "GET";
     #     $verb = "POST" if $post_request;
@@ -258,8 +264,15 @@ sub _escape_params {
     # Need to escape + characters in signature
     # see http://docs.amazonwebservices.com/AWSSimpleQueueService/2006-04-01/Query_QueryAuth.html
     # Likewise, need to escape + characters in ReceiptHandle
-    foreach my $key (qw(Signature MessageBody ReceiptHandle)) {
-        $params->{$key} = uri_escape($params->{$key}, '^A-Za-z0-9-_.~') if exists $params->{$key};
+    # Many characters are possible in MessageBody:
+    #    #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+    # probably should encode all keys and values for consistency and future-proofing
+    my $to_escape = qr{^(?:Signature|MessageBody|ReceiptHandle)|\.\d+\.(?:MessageBody|ReceiptHandle)$};
+    foreach my $key (keys %$params) {
+        next unless $key =~ m/$to_escape/;
+        next unless exists $params->{$key};
+        my $octets = encode('utf-8-strict', $params->{$key});
+        $params->{$key} = uri_escape($octets, $URI_SAFE_CHARACTERS);
     }
     return $params;
 }
