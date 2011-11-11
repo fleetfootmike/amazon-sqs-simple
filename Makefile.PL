@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
+use 5.0073;   # for Encode/utf8
 
 WriteMakefile(
     NAME                => 'Amazon::SQS::Simple',
