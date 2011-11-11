@@ -2,8 +2,9 @@
 
 use strict;
 use warnings;
-use Test::More tests => 35;
+use Test::More tests => 42;
 use Digest::MD5 qw(md5_hex);
+use Encode;
 
 BEGIN { use_ok('Amazon::SQS::Simple'); }
 
@@ -110,8 +111,8 @@ foreach my $msg_type (keys %messages) {
     ok(!$@, "Interpolating Amazon::SQS::Simple::SendResponse object in string context");
     
     ok($response->MessageId, 'Got MessageId when sending message');
-    ok($response->MD5OfMessageBody eq md5_hex($msg), 'Got back correct MD5 checksum for message')
-        or diag("Looking for " . md5_hex($msg) . ", got " . $response->MD5OfMessageBody);
+    ok($response->MD5OfMessageBody eq md5_hex(Encode::encode_utf8($msg)), 'Got back correct MD5 checksum for message')
+        or diag("Looking for " . md5_hex(Encode::encode_utf8($msg)) . ", got " . $response->MD5OfMessageBody);
 }
 
 my $received_msg = $q->ReceiveMessage();
@@ -130,6 +131,44 @@ ok(!$@, "Interpolating Amazon::SQS::Simple::Message object in string context");
 
 ok(UNIVERSAL::isa($received_msg, 'Amazon::SQS::Simple::Message'), 'ReceiveMessage returns Amazon::SQS::Simple::Message object');
 ok((grep {$_ eq $received_msg->MessageBody} values %messages), 'ReceiveMessage returned one of the messages we wrote');
+
+foreach my $international (
+                           # may fail if "use encoding 'utf8'" or other trickery is in effect
+                           Encode::decode("iso-8859-1",  "L\xE1szl\xF3 S\xF3lyom"),
+
+                           # certain to work
+                           Encode::decode("iso-8859-1",  pack "C*", qw/76 225 115 122 108 243 32 83 243 108 121 111 109/),
+
+                           # utf8 data which is not marked as such is tricky
+                           Encode::decode('utf8',        "L\xC3\xA1szl\xC3\xB3 S\xC3\xB3lyom"),
+
+                           Encode::decode("iso-8859-15", "\xBCUF"),
+                          ) {
+    my $response = eval {$q->SendMessage($international)};
+    ok(!$@ && UNIVERSAL::isa($response, 'Amazon::SQS::Simple::SendResponse'), "SendMessage works with UTF-8 messages");
+}
+
+SKIP: {
+    skip '\N{U+xxxx} escapes require Perl 5.12 or above', 2 unless $] >= 5.012;
+    foreach my $international (
+                               "I\N{U+00f1}t\N{U+00eb}rn\N{U+00e2}ti\N{U+00f4}n\N{U+00e0}liz\N{U+00e6}ti\N{U+00f8}n",
+                               "\N{U+01cf}\N{U+00f1}\N{U+04ad}\N{U+00eb}\N{U+0550}\N{U+014b}\N{U+00e2}\N{U+0165}\N{U+1e2f}\N{U+1e4f}\N{U+1e4b}\N{U+03b1}\N{U+0142}\N{U+0457}\N{U+017c}\N{U+00e6}\N{U+0167}\N{U+00ed}\N{U+00f8}\N{U+1e45}",
+                              ) {
+        my $response = eval {$q->SendMessage($international)};
+        ok(!$@ && UNIVERSAL::isa($response, 'Amazon::SQS::Simple::SendResponse'), "SendMessage works with UTF-8 messages");
+    }
+};
+
+TODO: {
+    local $TODO = "characters outside the Basic Multilingual Plane fail, contrary to Amazon docs";
+    foreach my $international (
+                               "emoji         |\N{U+1f320}|",      # shooting star
+                               "cjk ideograph |\N{U+22222}|",
+                              ) {
+        my $response = eval {$q->SendMessage($international)};
+        ok(!$@ && UNIVERSAL::isa($response, 'Amazon::SQS::Simple::SendResponse'), "SendMessage works with UTF8 messages outside the BMP");
+    }
+};
 
 for (1..10) {
     $q->SendMessage($_);
