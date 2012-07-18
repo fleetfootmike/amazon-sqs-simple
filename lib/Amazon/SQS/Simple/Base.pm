@@ -70,6 +70,8 @@ sub _dispatch {
     if ($self->{Timeout}) {
         $ua->timeout($self->{Timeout});
     }
+
+    $ua->env_proxy;
     
     $params = {
         AWSAccessKeyId      => $self->{AWSAccessKeyId},
