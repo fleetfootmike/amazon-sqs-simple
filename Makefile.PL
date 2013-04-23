@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
+use 5.0073;   # for Encode/utf8
 
 WriteMakefile(
     NAME                => 'Amazon::SQS::Simple',
@@ -11,6 +12,7 @@ WriteMakefile(
     PREREQ_PM => {
         'Test::More'        => 0,
         'Digest::HMAC_SHA1' => 0,
+        'Digest::SHA'       => 0,
         'LWP::UserAgent'    => 0,
         'MIME::Base64'      => 0,
         'URI::Escape'       => 0,
