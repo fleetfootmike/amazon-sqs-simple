@@ -274,13 +274,22 @@ the Amazon Simple Queue Service.
 
     my $q = $sqs->CreateQueue('queue_name');
 
-    $q->SendMessage('Hello world!');
-
-    my $msg = $q->ReceiveMessage();
-
-    print $msg->MessageBody() # Hello world!
-
-    $q->DeleteMessage($msg->MessageId());
+    # Single messages
+    
+    my $response = $q->SendMessage('Hello world!');
+    my $msg = $q->ReceiveMessage;
+    print $msg->MessageBody; # Hello world!    
+    $q->DeleteMessage($msg);
+    # or, for backward compatibility
+    $q->DeleteMessage($msg->ReceiptHandle);
+    
+    # Batch messaging of up to 10 messages per operation
+    
+    my @responses = $q->SendMessageBatch( [ 'Hello world!', 'Hello again!' ] );    
+    # or with defined message IDs
+    $q->SendMessageBatch( { msg1 => 'Hello world!', msg2 => 'Hello again!' } );
+    my @messages = $q->ReceiveMessageBatch; 
+    $q->DeleteMessageBatch( \@messages );
 
 =head1 INTRODUCTION
 
@@ -332,10 +341,27 @@ Options for ReceiveMessage:
 
 =over 4
 
-=item * MaxNumberOfMessages => NUMBER
+=item * MaxNumberOfMessages => INTEGER
 
-Maximum number of messages to return. Value should be an integer between 1
-and 10 inclusive. Default is 1. 
+Maximum number of messages to return (integer from 1 to 20). SQS never returns more messages than this value but might 
+return fewer. Not necessarily all the messages in the queue are returned. Defaults to 1.
+
+=item * WaitTimeSeconds => INTEGER
+
+Long poll support (integer from 0 to 20). The duration (in seconds) that the I<ReceiveMessage> action call will wait 
+until a message is in the queue to include in the response, as opposed to returning an empty response if a message 
+is not yet available.
+
+If you do not specify I<WaitTimeSeconds> in the request, the queue attribute I<ReceiveMessageWaitTimeSeconds>
+is used to determine how long to wait.
+
+=item * VisibilityTimeout => INTEGER
+
+The duration in seconds (integer from 0 to 43200) that the received messages are hidden from subsequent retrieve 
+requests after being retrieved by a I<ReceiveMessage> request.
+
+If you do not specify I<VisibilityTimeout> in the request, the queue attribute I<VisibilityTimeout> is used to 
+determine how long to wait.
 
 =back
 
@@ -343,9 +369,10 @@ and 10 inclusive. Default is 1.
 
 As ReceiveMessage(MaxNumberOfMessages => 10)
 
-=item B<DeleteMessage($receipt_handle, [%opts])>, B<DeleteMessage($message, [%opts])>
+=item B<DeleteMessage($message, [%opts])>
 
-Pass this method either a message object or receipt handle to delete that message from the queue
+Pass this method either a message object or receipt handle to delete that message from the queue. 
+For backward compatibility, can pass the message ReceiptHandle rather than the message. 
 
 =item B<DeleteMessageBatch($messages, [%opts])>
 
