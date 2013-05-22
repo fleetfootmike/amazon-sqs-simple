@@ -33,8 +33,47 @@ sub SendMessage {
 
     # default to most recent version
     return new Amazon::SQS::Simple::SendResponse(
-        $href->{SendMessageResult}
+        $href->{SendMessageResult}, $message
     );
+}
+
+sub SendMessageBatch {
+    my ($self, $messages, %params) = @_;
+    
+    $params{Action} = 'SendMessageBatch';
+    
+    if (ref($messages) eq  'ARRAY'){
+        my %messages;
+        my @IDs = map { "msg_$_" } (1..scalar(@$messages));
+        @messages{@IDs} = @$messages;
+        $messages = \%messages;
+    }
+    
+    my $i=0;
+    while (my ($id, $msg) = each %$messages){
+        if ($i==10){
+            warn "Batch messaging limited to 10 messages";
+            last;
+        }
+        $i++;
+        $params{"SendMessageBatchRequestEntry.$i.Id"} = $id;
+        $params{"SendMessageBatchRequestEntry.$i.MessageBody"} = $msg;
+    }
+    
+    my $href = $self->_dispatch(\%params); 
+    my @responses = ();
+    
+    # default to most recent version
+    for (@{$href->{SendMessageBatchResult}{SendMessageBatchResultEntry}}) {
+        push @responses, new Amazon::SQS::Simple::SendResponse($_, $messages->{$_->{Id}});
+    }
+    
+    if (wantarray){
+        return @responses;
+    }
+    else {
+        return \@responses;
+    }
 }
 
 sub ReceiveMessage {
@@ -56,20 +95,60 @@ sub ReceiveMessage {
         }
     }
     
-    if (@messages > 1 || wantarray) {
+    if (wantarray) {
         return @messages;
-    } elsif (@messages) {
+    } 
+    elsif ($params{MaxNumberOfMessages} && $params{MaxNumberOfMessages} > 1 && @messages) {
+        return \@messages;
+    }
+    elsif (@messages){
         return $messages[0];
-    } else {
+    } 
+    else {
         return undef;
     }
 }
 
+sub ReceiveMessageBatch {
+    my ($self, %params) = @_;
+    $params{MaxNumberOfMessages} = 10;
+    $self->ReceiveMessage(%params);
+}
+
 sub DeleteMessage {
-    my ($self, $receipt_handle, %params) = @_;
+    my ($self, $message, %params) = @_;
     
+    # to be consistent with DeleteMessageBatch, this will now accept a message object
+    my $receipt_handle;
+    if (ref($message) && $message->isa('Amazon::SQS::Simple::Message')){
+        $receipt_handle = $message->ReceiptHandle;
+    }
+    # for backward compatibility, we will still cope with a receipt handle
+    else {
+        $receipt_handle = $message;
+    }
     $params{Action} = 'DeleteMessage';
     $params{ReceiptHandle} = $receipt_handle;
+    
+    my $href = $self->_dispatch(\%params);
+}
+
+sub DeleteMessageBatch {
+    my ($self, $messages, %params) = @_;
+    return unless @$messages;
+    $params{Action} = 'DeleteMessageBatch';
+    
+    my $i=0;
+    foreach my $msg (@$messages){
+        $i++;
+        if ($i>10){
+            warn "Batch deletion limited to 10 messages";
+            last;
+        }
+        
+        $params{"DeleteMessageBatchRequestEntry.$i.Id"} = $msg->MessageId;
+        $params{"DeleteMessageBatchRequestEntry.$i.ReceiptHandle"} = $msg->ReceiptHandle;
+    }
     
     my $href = $self->_dispatch(\%params);
 }
@@ -77,7 +156,7 @@ sub DeleteMessage {
 sub ChangeMessageVisibility {
     my ($self, $receipt_handle, $timeout, %params) = @_;
     
-    if ($self->_api_version eq +SQS_VERSION_2008_01_01) {
+    if ($self->_api_version eq SQS_VERSION_2008_01_01) {
         carp "ChangeMessageVisibility not supported in this API version";
     }
     else {
@@ -98,7 +177,7 @@ our %valid_permission_actions = map { $_ => 1 } qw(* SendMessage ReceiveMessage 
 sub AddPermission {
     my ($self, $label, $account_actions, %params) = @_;
     
-    if ($self->_api_version eq +SQS_VERSION_2008_01_01) {
+    if ($self->_api_version eq SQS_VERSION_2008_01_01) {
         carp "AddPermission not supported in this API version";
     }
     else {
@@ -131,7 +210,7 @@ sub AddPermission {
 sub RemovePermission {
     my ($self, $label, %params) = @_;
     
-    if ($self->_api_version eq +SQS_VERSION_2008_01_01) {
+    if ($self->_api_version eq SQS_VERSION_2008_01_01) {
         carp "RemovePermission not supported in this API version";
     }
     else {
@@ -195,13 +274,22 @@ the Amazon Simple Queue Service.
 
     my $q = $sqs->CreateQueue('queue_name');
 
-    $q->SendMessage('Hello world!');
-
-    my $msg = $q->ReceiveMessage();
-
-    print $msg->MessageBody() # Hello world!
-
-    $q->DeleteMessage($msg->MessageId());
+    # Single messages
+    
+    my $response = $q->SendMessage('Hello world!');
+    my $msg = $q->ReceiveMessage;
+    print $msg->MessageBody; # Hello world!    
+    $q->DeleteMessage($msg);
+    # or, for backward compatibility
+    $q->DeleteMessage($msg->ReceiptHandle);
+    
+    # Batch messaging of up to 10 messages per operation
+    
+    my @responses = $q->SendMessageBatch( [ 'Hello world!', 'Hello again!' ] );    
+    # or with defined message IDs
+    $q->SendMessageBatch( { msg1 => 'Hello world!', msg2 => 'Hello again!' } );
+    my @messages = $q->ReceiveMessageBatch; 
+    $q->DeleteMessageBatch( \@messages );
 
 =head1 INTRODUCTION
 
@@ -226,30 +314,69 @@ Deletes the queue. Any messages contained in the queue will be lost.
 Sends the message. The message can be up to 8KB in size and should be
 plain text.
 
+=item B<SendMessageBatch($messages, [%opts])>
+
+Sends a batch of up to 10 messages, passed as an array-ref. 
+Message IDs (of the style 'msg_1', 'msg_2', etc) are auto-generated for each message.
+Alternatively, if you need to specify the format of the message ID then you can pass a hash-ref {$id1 => $message1, etc}
+
 =item B<ReceiveMessage([%opts])>
 
 Get the next message from the queue.
 
-Returns an C<Amazon::SQS::Simple::Message> object. See 
-L<Amazon::SQS::Simple::Message> for more details.
+Returns one or more C<Amazon::SQS::Simple::Message> objects, or undef if no messages are retrieved. 
 
-If MaxNumberOfMessages is greater than 1, the method returns
-an array of C<Amazon::SQS::Simple::Message> objects.
+If MaxNumberOfMessages is greater than 1, the method returns an array/array-ref (depending on context) 
+of C<Amazon::SQS::Simple::Message> objects.
+
+If MaxNumberOfMessages equals 1 (or is not set, in which case defaults to 1), returns a 
+single C<Amazon::SQS::Simple::Message> object. 
+
+NOTE: This behaviour has changed since v1.06. Previously, this method did not return an array ref in scalar context if
+multiple messages were returned, but only returned the first message. 
+
+See L<Amazon::SQS::Simple::Message> for more details.
 
 Options for ReceiveMessage:
 
 =over 4
 
-=item * MaxNumberOfMessages => NUMBER
+=item * MaxNumberOfMessages => INTEGER
 
-Maximum number of messages to return. Value should be an integer between 1
-and 10 inclusive. Default is 1. 
+Maximum number of messages to return (integer from 1 to 20). SQS never returns more messages than this value but might 
+return fewer. Not necessarily all the messages in the queue are returned. Defaults to 1.
+
+=item * WaitTimeSeconds => INTEGER
+
+Long poll support (integer from 0 to 20). The duration (in seconds) that the I<ReceiveMessage> action call will wait 
+until a message is in the queue to include in the response, as opposed to returning an empty response if a message 
+is not yet available.
+
+If you do not specify I<WaitTimeSeconds> in the request, the queue attribute I<ReceiveMessageWaitTimeSeconds>
+is used to determine how long to wait.
+
+=item * VisibilityTimeout => INTEGER
+
+The duration in seconds (integer from 0 to 43200) that the received messages are hidden from subsequent retrieve 
+requests after being retrieved by a I<ReceiveMessage> request.
+
+If you do not specify I<VisibilityTimeout> in the request, the queue attribute I<VisibilityTimeout> is used to 
+determine how long to wait.
 
 =back
 
-=item B<DeleteMessage($receipt_handle, [%opts])>
+=item B<ReceiveMessageBatch([%opts])>
 
-Delete the message with the specified receipt handle from the queue
+As ReceiveMessage(MaxNumberOfMessages => 10)
+
+=item B<DeleteMessage($message, [%opts])>
+
+Pass this method either a message object or receipt handle to delete that message from the queue. 
+For backward compatibility, can pass the message ReceiptHandle rather than the message. 
+
+=item B<DeleteMessageBatch($messages, [%opts])>
+
+Pass this method an array-ref containing up to 10 message objects to delete all of those messages from the queue
 
 =item B<ChangeMessageVisibility($receipt_handle, $timeout, [%opts])>
 

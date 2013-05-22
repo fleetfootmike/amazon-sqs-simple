@@ -3,9 +3,15 @@ package Amazon::SQS::Simple::SendResponse;
 use strict;
 use warnings;
 
+use Digest::MD5 qw(md5_hex);
+
 sub new {
-    my ($class, $msg) = @_;
-    return bless ($msg, $class);
+    my ($class, $msg, $body) = @_;
+    $msg = bless($msg, $class);
+    if ($body){
+        $msg->{MessageBody} = $body;
+    }
+    return $msg;
 }
 
 sub MessageId {
@@ -16,6 +22,11 @@ sub MessageId {
 sub MD5OfMessageBody {
     my $self = shift;
     return $self->{MD5OfMessageBody};
+}
+
+sub VerifyReceipt {
+    my $self = shift;
+    return $self->{MD5OfMessageBody} eq md5_hex($self->{MessageBody}) ? 1 : undef;
 }
 
 1;
@@ -44,6 +55,12 @@ Get the message unique identifier
 =item B<MD5OfMessageBody()>
 
 Get the MD5 checksum of the message body you sent
+
+=item B<VerifyReceipt()>
+
+Perform verification of message receipt.
+Compares the MD5 checksum returned by the response object with the expected checksum. 
+Returns 1 if receipt is verified, undef otherwise.
 
 =back
 

@@ -11,24 +11,26 @@ use XML::Simple;
 
 use base qw(Exporter);
 
-use constant SQS_VERSION_2009_02_01 => '2009-02-01';
-use constant SQS_VERSION_2008_01_01 => '2008-01-01';
-use constant BASE_ENDPOINT          => 'http://queue.amazonaws.com';
-use constant MAX_GET_MSG_SIZE       => 4096; # Messages larger than this size will be sent
-                                             # using a POST request.
+use constant { 
+    SQS_VERSION_2012_11_05 => '2012-11-05',
+    SQS_VERSION_2009_02_01 => '2009-02-01',
+    SQS_VERSION_2008_01_01 => '2008-01-01',
+    BASE_ENDPOINT          => 'http://queue.amazonaws.com',
+    DEF_MAX_GET_MSG_SIZE   => 4096, # Messages larger than this size will use a POST request.
+};
                                        
-our $DEFAULT_SQS_VERSION = +SQS_VERSION_2009_02_01;
-our @EXPORT = qw(SQS_VERSION_2009_02_01 SQS_VERSION_2008_01_01);
+our $DEFAULT_SQS_VERSION = SQS_VERSION_2012_11_05;
+our @EXPORT = qw(SQS_VERSION_2012_11_05 SQS_VERSION_2009_02_01 SQS_VERSION_2008_01_01);
 
 sub new {
-    my $class = shift;
+    my $class      = shift;
     my $access_key = shift;
     my $secret_key = shift;
     
     my $self = {
         AWSAccessKeyId   => $access_key,
         SecretKey        => $secret_key,
-        Endpoint         => +BASE_ENDPOINT,
+        Endpoint         => BASE_ENDPOINT,
         SignatureVersion => 1,
         Version          => $DEFAULT_SQS_VERSION,
         @_,
@@ -39,7 +41,7 @@ sub new {
     }
 
     # validate the Version, warn if it's not one we recognise
-    my @valid_versions = ( +SQS_VERSION_2008_01_01, +SQS_VERSION_2009_02_01 );
+    my @valid_versions = ( SQS_VERSION_2012_11_05, SQS_VERSION_2008_01_01, SQS_VERSION_2009_02_01 );
     if (!grep {$self->{Version} eq $_} @valid_versions) {
         carp "Warning: " 
            . $self->{Version} 
@@ -61,7 +63,6 @@ sub _dispatch {
     my $self         = shift;
     my $params       = shift || {};
     my $force_array  = shift || [];
-    my $post_request = 0;
     my $ua           = LWP::UserAgent->new();
     my $url          = $self->{Endpoint};
     my $response;
@@ -83,12 +84,8 @@ sub _dispatch {
         $params->{Timestamp} = _timestamp();
     }
     
-    if ($params->{MessageBody} && length($params->{MessageBody}) > +MAX_GET_MSG_SIZE) {
-        $post_request = 1;
-    }
-
+    my $post_request = $self->_get_or_post($params);    
     my $query = $self->_get_signed_query($params);
-
     $self->_debug_log($query);
 
     if ($post_request) {
@@ -120,6 +117,24 @@ sub _dispatch {
     }
 }
 
+sub _get_or_post {
+    my ($self, $params) = @_;
+    
+    my $msg_size = 0;
+    
+    # a single message
+    if ($params->{MessageBody}) {
+        $msg_size = length($params->{MessageBody});
+    }
+    # a batch message
+    elsif ($params->{"SendMessageBatchRequestEntry.1.MessageBody"}) {
+        foreach my $i (1..10){
+            last unless $msg_size += length($params->{"SendMessageBatchRequestEntry.$i.MessageBody"});
+        }
+    }
+    return $msg_size > $self->_max_get_msg_size ? 1 : 0;
+}
+
 sub _debug_log {
     my ($self, $msg) = @_;
     return unless $self->{_Debug};
@@ -147,14 +162,48 @@ sub _get_signed_query {
     
     # Need to escape + characters in signature
     # see http://docs.amazonwebservices.com/AWSSimpleQueueService/2006-04-01/Query_QueryAuth.html
-    $params->{Signature}     = uri_escape(encode_base64($hmac->digest, ''));
-    $params->{MessageBody}   = uri_escape($params->{MessageBody}) if $params->{MessageBody};
+    $params->{Signature} = uri_escape(encode_base64($hmac->digest, ''));
     
-    # Likewise, need to escape + characters in ReceiptHandle
-    $params->{ReceiptHandle} = uri_escape($params->{ReceiptHandle}) if $params->{ReceiptHandle};
+    # Likewise, need to escape + characters in MessageBody and ReceiptHandle
+    _escape_param($params, 'MessageBody', 'SendMessageBatchRequestEntry.n.MessageBody');
+    _escape_param($params, 'ReceiptHandle', 'DeleteMessageBatchRequestEntry.n.ReceiptHandle');
     
     my $query = join('&', map { $_ . '=' . $params->{$_} } keys %$params);
     return $query;
+}
+
+sub _escape_param {
+    my $params  = shift;
+    my $single  = shift;
+    my $multi_n = shift;
+    
+    if ($params->{$single}){
+        $params->{$single} = uri_escape($params->{$single});
+    }
+    else {
+        foreach my $i (1..10){
+            my $multi = $multi_n;
+            $multi =~ s/\.n\./\.$i\./;
+            if ($params->{$multi}){
+                $params->{$multi} = uri_escape($params->{$multi});
+            }
+            else {
+                last;
+            }
+        }        
+    }   
+}
+
+sub _max_get_msg_size {
+    my $self = shift;
+    # a user-defined cut-off
+    if (defined $self->{MAX_GET_MSG_SIZE}){
+        return $self->{MAX_GET_MSG_SIZE};
+    }
+    # the default cut-off
+    else {
+        return DEF_MAX_GET_MSG_SIZE;
+    }
 }
 
 sub _timestamp {
