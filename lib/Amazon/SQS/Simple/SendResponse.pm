@@ -67,6 +67,7 @@ Returns 1 if receipt is verified, undef otherwise.
 =head1 AUTHOR
 
 Copyright 2007-2008 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
+Copyright 2013 Mike (no relation) Whitaker E<lt>penfold@cpan.orgE<gt>
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

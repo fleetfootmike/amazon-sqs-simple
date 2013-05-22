@@ -98,10 +98,7 @@ sub ReceiveMessage {
     if (wantarray) {
         return @messages;
     } 
-    elsif ($params{MaxNumberOfMessages} && $params{MaxNumberOfMessages} > 1 && @messages) {
-        return \@messages;
-    }
-    elsif (@messages){
+    elsif (@messages) {
         return $messages[0];
     } 
     else {
@@ -324,16 +321,11 @@ Alternatively, if you need to specify the format of the message ID then you can 
 
 Get the next message from the queue.
 
-Returns one or more C<Amazon::SQS::Simple::Message> objects, or undef if no messages are retrieved. 
+Returns one or more C<Amazon::SQS::Simple::Message> objects (depending on whether called in list or scalar context), 
+or undef if no messages are retrieved. 
 
-If MaxNumberOfMessages is greater than 1, the method returns an array/array-ref (depending on context) 
-of C<Amazon::SQS::Simple::Message> objects.
-
-If MaxNumberOfMessages equals 1 (or is not set, in which case defaults to 1), returns a 
-single C<Amazon::SQS::Simple::Message> object. 
-
-NOTE: This behaviour has changed since v1.06. Previously, this method did not return an array ref in scalar context if
-multiple messages were returned, but only returned the first message. 
+NOTE: This behaviour has changed slightly since v1.06. It now always returns the first message in scalar
+context, irrespective of how many there are.
 
 See L<Amazon::SQS::Simple::Message> for more details.
 
@@ -422,9 +414,14 @@ attribute name is C<VisibilityTimeout>.
 
 =back
 
+=head1 ACKNOWLEDGEMENTS
+
+Chris Jones provied the batch message code in release 2.0
+
 =head1 AUTHOR
 
 Copyright 2007-2008 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
+Copyright 2013 Mike (no relation) Whitaker E<lt>penfold@cpan.orgE<gt>
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

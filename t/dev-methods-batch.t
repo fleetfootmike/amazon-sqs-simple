@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 52;
+use Test::More tests => 50;
 use Test::Warn;
 use Digest::MD5 qw(md5_hex);
 
@@ -33,9 +33,7 @@ ok($responses = $q->SendMessageBatch(\@ten_messages), 'SendMessageBatch');
 is(scalar(@$responses), 10, '10 response objects');
 
 foreach my $response (@$responses){
-
-	ok(UNIVERSAL::isa($response, 'Amazon::SQS::Simple::SendResponse'), "SendMessage returns Amazon::SQS::Simple::SendResponse object");
-
+	isa_ok($response, 'Amazon::SQS::Simple::SendResponse', "SendMessage returns Amazon::SQS::Simple::SendResponse object");
 	is($response->VerifyReceipt, 1, 'Message receipt verified')
 		or diag('VerifyReceipt failed');
 }
@@ -44,21 +42,16 @@ my @eleven_messages = ('K'..'U');
 warning_is { $ten_responses = $q->SendMessageBatch(\@eleven_messages) } "Batch messaging limited to 10 messages", "SendMessageBatch: Too many messages warning";
 is(scalar(@$ten_responses), 10, '10 response objects from 11 batch messages');
 
-# scalar context
-ok($received = $q->ReceiveMessageBatch(), 'ReceiveMessageBatch, scalar return');
-is(ref($received), 'ARRAY', 'ReceiveMessageBatch, scalar context returns ARRAY');
-
 # list context
-ok(@received = $q->ReceiveMessageBatch(), 'ReceiveMessageBatch, list return');
+ok(@received = $q->ReceiveMessageBatch(), 'ReceiveMessageBatch, list return of '. scalar @received .' messages');
 
-while (my $more = $q->ReceiveMessageBatch() ){
-	push @received, @$more;
+while (my @more = $q->ReceiveMessageBatch() ){
+	push @received, @more;
 }
-push @received, @$received;
 
 is(scalar(@received), 20, '20 messages received');
 foreach my $msg (@received){
-	ok(UNIVERSAL::isa($msg, 'Amazon::SQS::Simple::Message'), "ReceiveMessage returns Amazon::SQS::Simple::Message objects in list context");
+	isa_ok($msg, 'Amazon::SQS::Simple::Message', "ReceiveMessage returns Amazon::SQS::Simple::Message objects in list context");
 }
 
 my @five = splice(@received, 0, 5);

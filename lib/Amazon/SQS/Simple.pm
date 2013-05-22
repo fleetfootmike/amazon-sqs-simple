@@ -8,7 +8,7 @@ use Amazon::SQS::Simple::Base; # for constants
 use Amazon::SQS::Simple::Queue;
 use base qw(Exporter Amazon::SQS::Simple::Base);
 
-our $VERSION   = '1.06';
+our $VERSION   = '2.00';
 our @EXPORT_OK = qw( timestamp );
 
 sub GetQueue {
@@ -85,15 +85,20 @@ Service
     my $q = $sqs->CreateQueue('queue_name');
 
     # Send a message
-    $q->SendMessage('Hello world!');
-
+    my $response = $q->SendMessage('Hello world!');
+	
+	# Send multiple messages 
+	my @responses = $q->SendMessageBatch(['Hello world', 'Farewell cruel world']);
+	
     # Retrieve a message
     my $msg = $q->ReceiveMessage();
     print $msg->MessageBody() # Hello world!
 
     # Delete the message
     $q->DeleteMessage($msg->ReceiptHandle());
-
+	# or
+	$q->DeleteMessage($msg);
+	
     # Delete the queue
     $q->Delete();
 
@@ -234,10 +239,14 @@ You generally do not need to supply this option.
 
 Bill Alford wrote the code to support basic functionality of older API versions
 in release 0.9.
+James Neal provided the proxy support code in release 2.0
+Roland Walker provided support for the newer signature version in release 2.0
+Chris Jones provied the batch message code in release 2.0
 
 =head1 AUTHOR
 
 Copyright 2007-2008 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
+Copyright 2013 Mike (no relation) Whitaker E<lt>penfold@cpan.orgE<gt>
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

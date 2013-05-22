@@ -102,7 +102,7 @@ ok(!defined($response), 'ReceiveMessage called on empty queue returns undef');
 foreach my $msg_type (keys %messages) {
     my $msg = $messages{$msg_type};
     $response = $q->SendMessage($msg);
-    ok(UNIVERSAL::isa($response, 'Amazon::SQS::Simple::SendResponse'), "SendMessage returns Amazon::SQS::Simple::SendResponse object ($msg_type)");
+    isa_ok($response, 'Amazon::SQS::Simple::SendResponse', "SendMessage returns Amazon::SQS::Simple::SendResponse object ($msg_type)");
     
     eval {
         my $str = "$response";
@@ -128,7 +128,7 @@ eval {
 };
 ok(!$@, "Interpolating Amazon::SQS::Simple::Message object in string context");
 
-ok(UNIVERSAL::isa($received_msg, 'Amazon::SQS::Simple::Message'), 'ReceiveMessage returns Amazon::SQS::Simple::Message object');
+isa_ok($received_msg, 'Amazon::SQS::Simple::Message', 'ReceiveMessage returns Amazon::SQS::Simple::Message object');
 ok((grep {$_ eq $received_msg->MessageBody} values %messages), 'ReceiveMessage returned one of the messages we wrote');
 
 for (1..10) {
@@ -137,8 +137,8 @@ for (1..10) {
 
 my @messages = $q->ReceiveMessage(MaxNumberOfMessages => 10);
 
-ok(UNIVERSAL::isa($messages[0], 'Amazon::SQS::Simple::Message')
- , 'Calling ReceiveMessage with MaxNumberOfMessages returns array of Amazon::SQS::Simple::Message objects');
+isa_ok($messages[0], 'Amazon::SQS::Simple::Message', 
+	'Calling ReceiveMessage with MaxNumberOfMessages returns array of Amazon::SQS::Simple::Message objects');
 
 #################################################
 #### Changing message visibility
