@@ -63,3 +63,13 @@ Revision history for Amazon-SQS-Simple
 		Updated to support and default to SignatureVersion 2, stub SignatureVersion 3 (Roland Walker)
 		Proxy Support (James Neal)
 		Added SendMessageBatch, ReceiveMessageBatch (Chris Jones)
+		
+2.01	1 Jul 2013
+		Fix bug with SendMessageBatch and single messages :D
+		
+2.02	1 Jul 2013
+		As above with updated Changes file :D
+		
+2.03	1 Sep 2013
+		Retry 500 errors (on advice from AWS support)
+		Handle ARN-style endpoints (https://sqs.<host>.amazonaws.com/<nnn>/<queue>)

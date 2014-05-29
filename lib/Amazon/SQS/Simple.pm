@@ -8,11 +8,18 @@ use Amazon::SQS::Simple::Base; # for constants
 use Amazon::SQS::Simple::Queue;
 use base qw(Exporter Amazon::SQS::Simple::Base);
 
-our $VERSION   = '2.00';
+our $VERSION   = '2.03';
 our @EXPORT_OK = qw( timestamp );
 
 sub GetQueue {
     my ($self, $queue_endpoint) = @_;
+
+	if ($queue_endpoint =~ /^arn:aws:sqs/) {
+		my ($host, $user, $queue);
+		(undef, undef, undef, $host, $user, $queue) = split(/:/, $queue_endpoint);
+		$queue_endpoint = "https://sqs.$host.amazonaws.com/$user/$queue";
+	}
+
     return new Amazon::SQS::Simple::Queue(
         %$self,
         Endpoint => $queue_endpoint,

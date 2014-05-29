@@ -60,7 +60,7 @@ sub SendMessageBatch {
         $params{"SendMessageBatchRequestEntry.$i.MessageBody"} = $msg;
     }
     
-    my $href = $self->_dispatch(\%params); 
+    my $href = $self->_dispatch(\%params, [qw/SendMessageBatchResultEntry/]); 
     my @responses = ();
     
     # default to most recent version

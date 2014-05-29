@@ -97,34 +97,45 @@ sub _dispatch {
 
     $self->_debug_log($query);
 
-    if ($post_request) {
-        $response = $ua->post(
-            $url, 
-            'Content-Type' => 'application/x-www-form-urlencoded;charset=utf-8',
-            'Content'      => $query,
-            @auth_headers,
-        );
-    }
-    else {
-        $response = $ua->get("$url/?$query", "Content-Type" => "text/plain;charset=utf-8", @auth_headers);
-    }
+	my $try;
+	foreach $try (1..3) {	
+	    if ($post_request) {
+	        $response = $ua->post(
+	            $url, 
+	            'Content-Type' => 'application/x-www-form-urlencoded;charset=utf-8',
+	            'Content'      => $query,
+	            @auth_headers,
+	        );
+	    }
+	    else {
+	        $response = $ua->get("$url/?$query", "Content-Type" => "text/plain;charset=utf-8", @auth_headers);
+	    }
         
-    if ($response->is_success) {
-        $self->_debug_log($response->content);
-        my $href = XMLin($response->content, ForceArray => $force_array, KeyAttr => {});
-        return $href;
-    }
-    else {
-        my $msg;
-        eval {
-            my $href = XMLin($response->content);
-            $msg = $href->{Error}{Message};
-        };
-        
-        my $error = "ERROR: On calling $params->{Action}: " . $response->status_line;
-        $error .= " ($msg)" if $msg;
-        croak $error;
-    }
+		# $response isa HTTP::Response
+		
+	    if ($response->is_success) {
+	        $self->_debug_log($response->content);
+	        my $href = XMLin($response->content, ForceArray => $force_array, KeyAttr => {});
+	        return $href;
+	    }
+	
+		# advice from internal AWS support - most client libraries try 3 times in the face
+		# of 500 errors, so ours should too
+		
+		next if ($response->code == 500);
+     }
+
+	 # if we fall out of the loop, then we have either a non-500 error or a persistent 500.
+	
+     my $msg;
+     eval {
+         my $href = XMLin($response->content);
+         $msg = $href->{Error}{Message};
+     };
+ 
+     my $error = "ERROR [try $try]: On calling $params->{Action}: " . $response->status_line;
+     $error .= " ($msg)" if $msg;
+     croak $error;
 }
 
 sub _get_or_post {
