@@ -13,13 +13,13 @@ use Encode qw(encode);
 
 use base qw(Exporter);
 
-use constant { 
+use constant ({ 
     SQS_VERSION_2012_11_05 => '2012-11-05',
     SQS_VERSION_2009_02_01 => '2009-02-01',
     SQS_VERSION_2008_01_01 => '2008-01-01',
     BASE_ENDPOINT          => 'http://queue.amazonaws.com',
     DEF_MAX_GET_MSG_SIZE   => 4096, # Messages larger than this size will use a POST request.
-};
+});
                                        
 
 our $DEFAULT_SQS_VERSION = SQS_VERSION_2012_11_05;
@@ -48,9 +48,9 @@ sub new {
     my @valid_versions = ( SQS_VERSION_2012_11_05, SQS_VERSION_2008_01_01, SQS_VERSION_2009_02_01 );
     if (!grep {$self->{Version} eq $_} @valid_versions) {
         carp "Warning: " 
-           . $self->{Version} 
-           . " might not be a valid version. Recognised versions are " 
-           . join(', ', @valid_versions);
+            . $self->{Version} 
+            . " might not be a valid version. Recognised versions are " 
+            . join(', ', @valid_versions);
     }
 
     $self = bless($self, $class);
@@ -97,45 +97,44 @@ sub _dispatch {
 
     $self->_debug_log($query);
 
-	my $try;
-	foreach $try (1..3) {	
-	    if ($post_request) {
-	        $response = $ua->post(
-	            $url, 
-	            'Content-Type' => 'application/x-www-form-urlencoded;charset=utf-8',
-	            'Content'      => $query,
-	            @auth_headers,
-	        );
-	    }
-	    else {
-	        $response = $ua->get("$url/?$query", "Content-Type" => "text/plain;charset=utf-8", @auth_headers);
-	    }
+    my $try;
+    foreach $try (1..3) {	
+        if ($post_request) {
+            $response = $ua->post(
+                $url, 
+                'Content-Type' => 'application/x-www-form-urlencoded;charset=utf-8',
+                'Content'      => $query,
+                @auth_headers,
+            );
+        } else {
+            $response = $ua->get("$url/?$query", "Content-Type" => "text/plain;charset=utf-8", @auth_headers);
+        }
         
-		# $response isa HTTP::Response
+        # $response isa HTTP::Response
 		
-	    if ($response->is_success) {
-	        $self->_debug_log($response->content);
-	        my $href = XMLin($response->content, ForceArray => $force_array, KeyAttr => {});
-	        return $href;
-	    }
+        if ($response->is_success) {
+            $self->_debug_log($response->content);
+            my $href = XMLin($response->content, ForceArray => $force_array, KeyAttr => {});
+            return $href;
+        }
 	
-		# advice from internal AWS support - most client libraries try 3 times in the face
-		# of 500 errors, so ours should too
+        # advice from internal AWS support - most client libraries try 3 times in the face
+        # of 500 errors, so ours should too
 		
-		next if ($response->code == 500);
-     }
+        next if ($response->code == 500);
+    }
 
-	 # if we fall out of the loop, then we have either a non-500 error or a persistent 500.
+    # if we fall out of the loop, then we have either a non-500 error or a persistent 500.
 	
-     my $msg;
-     eval {
-         my $href = XMLin($response->content);
-         $msg = $href->{Error}{Message};
-     };
+    my $msg;
+    eval {
+        my $href = XMLin($response->content);
+        $msg = $href->{Error}{Message};
+    };
  
-     my $error = "ERROR [try $try]: On calling $params->{Action}: " . $response->status_line;
-     $error .= " ($msg)" if $msg;
-     croak $error;
+    my $error = "ERROR [try $try]: On calling $params->{Action}: " . $response->status_line;
+    $error .= " ($msg)" if $msg;
+    croak $error;
 }
 
 sub _get_or_post {
@@ -149,7 +148,7 @@ sub _get_or_post {
     }
     # a batch message
     elsif ($params->{"SendMessageBatchRequestEntry.1.MessageBody"}) {
-        foreach my $i (1..10){
+        foreach my $i (1..10) {
             last unless $msg_size += length($params->{"SendMessageBatchRequestEntry.$i.MessageBody"});
         }
     }
@@ -167,7 +166,7 @@ sub _get_signed_query {
     my ($self, $params, $post_request) = @_;
 
     my $version = $params->{SignatureVersion};
-       $version = $self->{SignatureVersion} unless defined $version;
+    $version = $self->{SignatureVersion} unless defined $version;
     my @auth_headers;
 
     if ($version == 0 and defined $version) {
@@ -207,7 +206,7 @@ sub _sign_query_v1 {
     
     $params->{SignatureVersion} = 1;
     
-    for my $key( sort { uc $a cmp uc $b } keys %$params ) {
+    for my $key ( sort { uc $a cmp uc $b } keys %$params ) {
         if (defined $params->{$key}) {
             $to_sign = $to_sign . $key . $params->{$key};
         }
@@ -226,7 +225,7 @@ sub _sign_query_v2 {
     $params->{SignatureMethod} = 'HmacSHA256';
 
     my $to_sign;
-    for my $key( sort keys %$params ) {
+    for my $key ( sort keys %$params ) {
         $to_sign .= '&' if $to_sign;
         my $key_octets   = encode('utf-8-strict', $key);
         my $value_octets = encode('utf-8-strict', $params->{$key});
@@ -234,7 +233,7 @@ sub _sign_query_v2 {
     }
 
     my $verb = "GET";
-       $verb = "POST" if $post_request;
+    $verb = "POST" if $post_request;
     my $host = lc URI->new($self->{Endpoint})->host;
     my $path = '/';
     if ($self->{Endpoint} =~ m{^https?://[^/]*(/.*)$}) {
@@ -317,17 +316,15 @@ sub _escape_param {
     my $single  = shift;
     my $multi_n = shift;
     
-    if ($params->{$single}){
+    if ($params->{$single}) {
         $params->{$single} = uri_escape($params->{$single});
-    }
-    else {
-        foreach my $i (1..10){
+    } else {
+        foreach my $i (1..10) {
             my $multi = $multi_n;
             $multi =~ s/\.n\./\.$i\./;
-            if ($params->{$multi}){
+            if ($params->{$multi}) {
                 $params->{$multi} = uri_escape($params->{$multi});
-            }
-            else {
+            } else {
                 last;
             }
         }        
@@ -337,7 +334,7 @@ sub _escape_param {
 sub _max_get_msg_size {
     my $self = shift;
     # a user-defined cut-off
-    if (defined $self->{MAX_GET_MSG_SIZE}){
+    if (defined $self->{MAX_GET_MSG_SIZE}) {
         return $self->{MAX_GET_MSG_SIZE};
     }
     # the default cut-off
@@ -353,13 +350,13 @@ sub _timestamp {
     }
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime($t);
     return sprintf("%4i-%02i-%02iT%02i:%02i:%02iZ",
-        ($year + 1900),
-        ($mon + 1),
-        $mday,
-        $hour,
-        $min,
-        $sec
-    );
+                   ($year + 1900),
+                   ($mon + 1),
+                   $mday,
+                   $hour,
+                   $min,
+                   $sec
+               );
 }
 
 1;
