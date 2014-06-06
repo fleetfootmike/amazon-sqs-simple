@@ -9,6 +9,7 @@ use LWP::UserAgent;
 use MIME::Base64;
 use URI::Escape;
 use XML::Simple;
+use HTTP::Date;
 use Encode qw(encode);
 
 use base qw(Exporter);
@@ -345,18 +346,9 @@ sub _max_get_msg_size {
 
 sub _timestamp {
     my $t = shift;
-    if (!defined $t) {
-        $t = time;
-    }
-    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime($t);
-    return sprintf("%4i-%02i-%02iT%02i:%02i:%02iZ",
-                   ($year + 1900),
-                   ($mon + 1),
-                   $mday,
-                   $hour,
-                   $min,
-                   $sec
-               );
+    my $formatted_time = HTTP::Date::time2isoz($t // time);
+    $formatted_time =~ s/ /T/;
+    return $formatted_time;
 }
 
 1;
