@@ -85,7 +85,8 @@ sub _dispatch {
         %$params
     };
 
-    $params->{AWSAccessKeyId} !~ /AWSAccessKeyId/ || Carp::confess("Got a bad aws access key: " . Data::Dumper->Dump([{
+    my $start_key = $self->{AWSAccessKeyId};
+    $self->{AWSAccessKeyId} !~ /AWSAccessKeyId/ || Carp::confess("Got a bad aws access key: " . Data::Dumper->Dump([{
         self => $self,
         params => $params
         }]));
@@ -107,6 +108,7 @@ sub _dispatch {
         $req->header('x-amz-target', 'SQS_' . SQS_VERSION_2012_11_05 . '.' . $params->{Action});
         $req->header('content-type' => 'application/x-www-form-urlencoded;charset=utf-8');
 
+        $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
         my $escaped_params = $self->_escape_params($params);
         my $payload = join('&', map { $_ . '=' . $escaped_params->{$_} } keys %$escaped_params);
         $payload !~ /\QAWSAccessKeyId=AWSAccessKeyId\E/  || Carp::confess("Overwritten access key" . Data::Dumper->Dump([$self]));
@@ -122,15 +124,20 @@ sub _dispatch {
         $amz->from_http_request($req);
         $req->header(Authorization => $amz->calculate_signature);
         
+        $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
         $self->_debug_log($req->as_string());
+
         
         $response = $self->{UserAgent}->request($req);
         
+        $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
         if ($response->is_success) {
             $self->_debug_log($response->content);
             my $href = XMLin($response->content, ForceArray => $force_array, KeyAttr => {});
+            $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
             return $href;
         } else {
+            $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
             die("Got an error: " . $response->as_string());
         }
 	
@@ -140,6 +147,7 @@ sub _dispatch {
 		
         if ($response->code == 500) {
             Time::HiRes::usleep(2 ** $try * 50 * 1000);
+            $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
             next;
         }
     }
@@ -152,6 +160,7 @@ sub _dispatch {
         $msg = $href->{Error}{Message};
     };
  
+    $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
     my $error = "ERROR: On calling $params->{Action}: " . $response->status_line;
     $error .= " ($msg)" if $msg;
     croak $error;
@@ -177,7 +186,6 @@ sub _escape_params {
     my $to_escape = qr{^(?:Signature|MessageBody|ReceiptHandle)|\.\d+\.(?:MessageBody|ReceiptHandle)$};
     foreach my $key (keys %$params) {
         next unless $key =~ m/$to_escape/;
-        next unless exists $params->{$key};
         my $octets = encode('utf-8-strict', $params->{$key});
         $params->{$key} = uri_escape($octets, $URI_SAFE_CHARACTERS);
     }
