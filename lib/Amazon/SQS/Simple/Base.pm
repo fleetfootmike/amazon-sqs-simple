@@ -100,9 +100,10 @@ sub _dispatch {
         $req->header('Date' => $http_date);
         $req->header('x-amz-target', 'SQS_' . SQS_VERSION_2012_11_05 . '.' . $params->{Action});
         $req->header('content-type' => 'application/x-www-form-urlencoded;charset=utf-8');
-        
+
         $params = $self->_escape_params($params);
         my $payload = join('&', map { $_ . '=' . $params->{$_} } keys %$params);
+        $payload !~ /\QAWSAccessKeyId=AWSAccessKeyId\E/  || Carp::confess("Overwritten access key");
         $req->content($payload);;
         $req->header('Content-Length', length($payload));
         my $amz = Amazon::SQS::SignatureV4->new(
