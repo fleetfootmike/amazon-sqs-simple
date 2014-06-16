@@ -14,6 +14,7 @@ use HTTP::Request::Common;
 use Amazon::SQS::SignatureV4;
 use POSIX qw(strftime);
 use Encode qw(encode);
+use Data::Dumper;
 
 use base qw(Exporter);
 
@@ -84,6 +85,11 @@ sub _dispatch {
         %$params
     };
 
+    $params->{AWSAccessKeyId} !~ /AWSAccessKeyId/ || Carp::confess("Got a bad aws access key: " . Data::Dumper->Dump([{
+        self => $self,
+        params => $params
+        }]));
+
     if (!$params->{Timestamp} && !$params->{Expires}) {
         $params->{Timestamp} = _timestamp();
     }
@@ -103,7 +109,7 @@ sub _dispatch {
 
         my $escaped_params = $self->_escape_params($params);
         my $payload = join('&', map { $_ . '=' . $escaped_params->{$_} } keys %$escaped_params);
-        $payload !~ /\QAWSAccessKeyId=AWSAccessKeyId\E/  || Carp::confess("Overwritten access key");
+        $payload !~ /\QAWSAccessKeyId=AWSAccessKeyId\E/  || Carp::confess("Overwritten access key" . Data::Dumper->Dump([$self]));
         $req->content($payload);;
         $req->header('Content-Length', length($payload));
         my $amz = Amazon::SQS::SignatureV4->new(
