@@ -87,37 +87,38 @@ sub _dispatch {
     if (!$params->{Timestamp} && !$params->{Expires}) {
         $params->{Timestamp} = _timestamp();
     }
-    
-    my $req = HTTP::Request->new(POST => $url);
-    $req->header(host => URI->new($url)->host);
-    my $now = time;
-    my $http_date = strftime('%Y%m%dT%H%M%SZ', gmtime($now));
-    my $date = strftime('%Y%m%d', gmtime($now));
-    
-    $req->protocol('HTTP/1.1');
-    $req->header('Date' => $http_date);
-    $req->header('x-amz-target', 'SQS_' . SQS_VERSION_2012_11_05 . '.' . $params->{Action});
-    $req->header('content-type' => 'application/x-www-form-urlencoded;charset=utf-8');
-
-    $params = $self->_escape_params($params);
-    my $payload = join('&', map { $_ . '=' . $params->{$_} } keys %$params);
-    $req->content($payload);;
-    $req->header('Content-Length', length($payload));
-    my $amz = Amazon::SQS::SignatureV4->new(
-        version    => 4,
-        algorithm  => 'AWS4-HMAC-SHA256',
-        access_key => $self->{AWSAccessKeyId},
-        scope      => $date . "/" . $self->{Region} . '/sqs/aws4_request',
-        secret_key => $self->{SecretKey},
-    );
-    $amz->from_http_request($req);
-    $req->header(Authorization => $amz->calculate_signature);
-    
-    $self->_debug_log($req->as_string());
 
     foreach my $try (1..4) {	
+        
+        my $req = HTTP::Request->new(POST => $url);
+        $req->header(host => URI->new($url)->host);
+        my $now = time;
+        my $http_date = strftime('%Y%m%dT%H%M%SZ', gmtime($now));
+        my $date = strftime('%Y%m%d', gmtime($now));
+        
+        $req->protocol('HTTP/1.1');
+        $req->header('Date' => $http_date);
+        $req->header('x-amz-target', 'SQS_' . SQS_VERSION_2012_11_05 . '.' . $params->{Action});
+        $req->header('content-type' => 'application/x-www-form-urlencoded;charset=utf-8');
+        
+        $params = $self->_escape_params($params);
+        my $payload = join('&', map { $_ . '=' . $params->{$_} } keys %$params);
+        $req->content($payload);;
+        $req->header('Content-Length', length($payload));
+        my $amz = Amazon::SQS::SignatureV4->new(
+            version    => 4,
+            algorithm  => 'AWS4-HMAC-SHA256',
+            access_key => $self->{AWSAccessKeyId},
+            scope      => $date . "/" . $self->{Region} . '/sqs/aws4_request',
+            secret_key => $self->{SecretKey},
+        );
+        $amz->from_http_request($req);
+        $req->header(Authorization => $amz->calculate_signature);
+        
+        $self->_debug_log($req->as_string());
+        
         $response = $self->{UserAgent}->request($req);
-		
+        
         if ($response->is_success) {
             $self->_debug_log($response->content);
             my $href = XMLin($response->content, ForceArray => $force_array, KeyAttr => {});
