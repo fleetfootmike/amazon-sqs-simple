@@ -273,3 +273,5 @@ ok(
  && $q->Endpoint() =~ m{/$queue_name$}
  , "CreateQueue returned a queue with SignatureVersion 1 (name was $queue_name)"
 );
+
+$q->Delete;

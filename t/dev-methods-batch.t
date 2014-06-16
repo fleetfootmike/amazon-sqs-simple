@@ -59,3 +59,5 @@ ok($q->DeleteMessageBatch(\@five), 'DeleteMessageBatch - five messages');
 
 my @eleven = splice(@received, 0, 11);
 warning_is { $q->DeleteMessageBatch(\@eleven) } "Batch deletion limited to 10 messages", "SendMessageBatch: Too many messages warning";
+
+$q->Delete;
