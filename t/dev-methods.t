@@ -250,4 +250,3 @@ ok(!$@, 'DeleteMessage on ReceiptHandle of received message') or diag($@);
 
 eval { $q->Delete(); };
 ok(!$@, 'Delete on non-empty queue') or diag($@);
-
