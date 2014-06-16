@@ -101,8 +101,8 @@ sub _dispatch {
         $req->header('x-amz-target', 'SQS_' . SQS_VERSION_2012_11_05 . '.' . $params->{Action});
         $req->header('content-type' => 'application/x-www-form-urlencoded;charset=utf-8');
 
-        $params = $self->_escape_params($params);
-        my $payload = join('&', map { $_ . '=' . $params->{$_} } keys %$params);
+        my $escaped_params = $self->_escape_params($params);
+        my $payload = join('&', map { $_ . '=' . $escaped_params->{$_} } keys %$escaped_params);
         $payload !~ /\QAWSAccessKeyId=AWSAccessKeyId\E/  || Carp::confess("Overwritten access key");
         $req->content($payload);;
         $req->header('Content-Length', length($payload));
