@@ -33,7 +33,9 @@ sub new {
     my $class      = shift;
     my $access_key = shift;
     my $secret_key = shift;
-    
+
+    defined($access_key) && $access_key ne 'AWSAccessKeyId' || Carp::confess("Got a bad queue constructor call");
+
     my $self = {
         AWSAccessKeyId   => $access_key,
         SecretKey        => $secret_key,
@@ -42,6 +44,8 @@ sub new {
         Version          => $DEFAULT_SQS_VERSION,
         @_,
     };
+
+
 
     if (!defined($self->{UserAgent})) {
         $self->{UserAgent} = LWP::UserAgent->new(keep_alive => 4);
