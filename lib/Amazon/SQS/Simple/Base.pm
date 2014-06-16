@@ -31,21 +31,18 @@ our $URI_SAFE_CHARACTERS = '^A-Za-z0-9-_.~'; # defined by AWS, same as URI::Esca
 
 sub new {
     my $class      = shift;
-    my $access_key = shift;
-    my $secret_key = shift;
-
-    defined($access_key) && $access_key ne 'AWSAccessKeyId' || Carp::confess("Got a bad queue constructor call");
-
+    my @args = @_;
+    if (scalar(@args) == 2) {
+        my ($access_key, $secret_key) = @args;
+        @args = (AWSAccessKeyId => $access_key,
+                 SecretKey => $secret_key);
+    }
     my $self = {
-        AWSAccessKeyId   => $access_key,
-        SecretKey        => $secret_key,
         Endpoint         => +BASE_ENDPOINT,
         SignatureVersion => 4,
         Version          => $DEFAULT_SQS_VERSION,
-        @_,
+        @args
     };
-
-
 
     if (!defined($self->{UserAgent})) {
         $self->{UserAgent} = LWP::UserAgent->new(keep_alive => 4);
@@ -84,22 +81,12 @@ sub _dispatch {
     my $post_request = 0;
 
     my $start_key = $self->{AWSAccessKeyId};
-    $self->{AWSAccessKeyId} !~ /AWSAccessKeyId/ || Carp::confess("Got a bad aws access key: " . Data::Dumper->Dump([{
-        self => $self,
-        params => $params
-        }]));
     
     $params = {
         AWSAccessKeyId      => $self->{AWSAccessKeyId},
         Version             => $self->{Version},
         %$params
     };
-
-    $self->{AWSAccessKeyId} !~ /AWSAccessKeyId/ || Carp::confess("Got a bad aws access key2: " . Data::Dumper->Dump([{
-        self => $self,
-        params => $params
-        }]));
-
 
     if (!$params->{Timestamp} && !$params->{Expires}) {
         $params->{Timestamp} = _timestamp();
@@ -118,10 +105,8 @@ sub _dispatch {
         $req->header('x-amz-target', 'SQS_' . SQS_VERSION_2012_11_05 . '.' . $params->{Action});
         $req->header('content-type' => 'application/x-www-form-urlencoded;charset=utf-8');
 
-        $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
         my $escaped_params = $self->_escape_params($params);
         my $payload = join('&', map { $_ . '=' . $escaped_params->{$_} } keys %$escaped_params);
-        $payload !~ /\QAWSAccessKeyId=AWSAccessKeyId\E/  || Carp::confess("Overwritten access key" . Data::Dumper->Dump([$self]));
         $req->content($payload);;
         $req->header('Content-Length', length($payload));
         my $amz = Amazon::SQS::SignatureV4->new(
@@ -134,20 +119,16 @@ sub _dispatch {
         $amz->from_http_request($req);
         $req->header(Authorization => $amz->calculate_signature);
         
-        $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
         $self->_debug_log($req->as_string());
 
         
         $response = $self->{UserAgent}->request($req);
         
-        $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
         if ($response->is_success) {
             $self->_debug_log($response->content);
             my $href = XMLin($response->content, ForceArray => $force_array, KeyAttr => {});
-            $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
             return $href;
         } else {
-            $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
             die("Got an error: " . $response->as_string());
         }
 	
@@ -159,7 +140,6 @@ sub _dispatch {
             my $sleep_amount= 2 ** $try * 50 * 1000;
             $self->_debug_log("Doing sleep for: $sleep_amount");
             Time::HiRes::usleep($sleep_amount);
-            $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
             next;
         }
     }
@@ -172,7 +152,6 @@ sub _dispatch {
         $msg = $href->{Error}{Message};
     };
  
-    $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
     my $error = "ERROR: On calling $params->{Action}: " . $response->status_line;
     $error .= " ($msg)" if $msg;
     croak $error;
