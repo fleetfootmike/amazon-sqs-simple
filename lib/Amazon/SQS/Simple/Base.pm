@@ -78,6 +78,12 @@ sub _dispatch {
     my $response;
     my $post_body;
     my $post_request = 0;
+
+    my $start_key = $self->{AWSAccessKeyId};
+    $self->{AWSAccessKeyId} !~ /AWSAccessKeyId/ || Carp::confess("Got a bad aws access key: " . Data::Dumper->Dump([{
+        self => $self,
+        params => $params
+        }]));
     
     $params = {
         AWSAccessKeyId      => $self->{AWSAccessKeyId},
@@ -85,11 +91,11 @@ sub _dispatch {
         %$params
     };
 
-    my $start_key = $self->{AWSAccessKeyId};
-    $self->{AWSAccessKeyId} !~ /AWSAccessKeyId/ || Carp::confess("Got a bad aws access key: " . Data::Dumper->Dump([{
+    $self->{AWSAccessKeyId} !~ /AWSAccessKeyId/ || Carp::confess("Got a bad aws access key2: " . Data::Dumper->Dump([{
         self => $self,
         params => $params
         }]));
+
 
     if (!$params->{Timestamp} && !$params->{Expires}) {
         $params->{Timestamp} = _timestamp();
@@ -146,7 +152,9 @@ sub _dispatch {
         # use exponential backoff.
 		
         if ($response->code == 500) {
-            Time::HiRes::usleep(2 ** $try * 50 * 1000);
+            my $sleep_amount= 2 ** $try * 50 * 1000;
+            $self->_debug_log("Doing sleep for: $sleep_amount");
+            Time::HiRes::usleep($sleep_amount);
             $self->{AWSAccessKeyId} eq $start_key || Carp::confess("Start key changed");
             next;
         }
