@@ -15,6 +15,7 @@ use Amazon::SQS::SignatureV4;
 use POSIX qw(strftime);
 use Encode qw(encode);
 use Data::Dumper;
+use VM::EC2::Security::CredentialCache;
 
 use base qw(Exporter);
 
@@ -32,7 +33,7 @@ our $URI_SAFE_CHARACTERS = '^A-Za-z0-9-_.~'; # defined by AWS, same as URI::Esca
 sub new {
     my $class      = shift;
     my @args = @_;
-    if (scalar(@args) == 2) {
+    if (scalar(@args) == 2 && $args[0] ne 'UseIAMRole') {
         my ($access_key, $secret_key) = @args;
         @args = (AWSAccessKeyId => $access_key,
                  SecretKey => $secret_key);
@@ -58,7 +59,7 @@ sub new {
 
     $self->{UserAgent}->env_proxy;
 
-    if (!$self->{AWSAccessKeyId} || !$self->{SecretKey}) {
+    if (!$self->{UseIAMRole} && (!$self->{AWSAccessKeyId} || !$self->{SecretKey})) {
         croak "Missing AWSAccessKey or SecretKey";
     }
 
@@ -80,10 +81,7 @@ sub _dispatch {
     my $post_body;
     my $post_request = 0;
 
-    my $start_key = $self->{AWSAccessKeyId};
-    
     $params = {
-        AWSAccessKeyId      => $self->{AWSAccessKeyId},
         Version             => $self->{Version},
         %$params
     };
@@ -105,10 +103,22 @@ sub _dispatch {
         $req->header('x-amz-target', 'SQS_' . SQS_VERSION_2012_11_05 . '.' . $params->{Action});
         $req->header('content-type' => 'application/x-www-form-urlencoded;charset=utf-8');
 
+        if ($self->{UseIAMRole}) {
+            my $creds = VM::EC2::Security::CredentialCache->get();
+            defined($creds) || die("Unable to retrieve IAM role credentials");
+            $self->{AWSAccessKeyId} = $creds->accessKeyId;
+            $self->{SecretKey} = $creds->secretAccessKey;
+            $req->header('x-amz-security-token' => $creds->sessionToken);
+        }
+
+        $params->{AWSAccessKeyId} = $self->{AWSAccessKeyId};
+
         my $escaped_params = $self->_escape_params($params);
         my $payload = join('&', map { $_ . '=' . $escaped_params->{$_} } keys %$escaped_params);
         $req->content($payload);;
         $req->header('Content-Length', length($payload));
+
+
         my $amz = Amazon::SQS::SignatureV4->new(
             version    => 4,
             algorithm  => 'AWS4-HMAC-SHA256',
