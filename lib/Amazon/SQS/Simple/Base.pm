@@ -11,7 +11,7 @@ use URI::Escape;
 use XML::Simple;
 use HTTP::Date;
 use HTTP::Request::Common;
-use Amazon::SQS::SignatureV4;
+use AWS::Signature4;
 use POSIX qw(strftime);
 use Encode qw(encode);
 use Data::Dumper;
@@ -115,19 +115,12 @@ sub _dispatch {
 
         my $escaped_params = $self->_escape_params($params);
         my $payload = join('&', map { $_ . '=' . $escaped_params->{$_} } keys %$escaped_params);
-        $req->content($payload);;
+        $req->content($payload);
         $req->header('Content-Length', length($payload));
 
-
-        my $amz = Amazon::SQS::SignatureV4->new(
-            version    => 4,
-            algorithm  => 'AWS4-HMAC-SHA256',
-            access_key => $self->{AWSAccessKeyId},
-            scope      => $date . "/" . $self->{Region} . '/sqs/aws4_request',
-            secret_key => $self->{SecretKey},
-        );
-        $amz->from_http_request($req);
-        $req->header(Authorization => $amz->calculate_signature);
+        my $signer = AWS::Signature4->new(-access_key => $self->{AWSAccessKeyId},
+                                          -secret_key => $self->{SecretKey});
+        $signer->sign($req);
         
         $self->_debug_log($req->as_string());
 
