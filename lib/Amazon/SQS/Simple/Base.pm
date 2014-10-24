@@ -5,7 +5,7 @@ use warnings;
 use Carp qw( croak carp );
 use Digest::HMAC_SHA1;
 use Digest::SHA qw(hmac_sha256 sha256);
-use LWP::UserAgent;
+use Furl;
 use MIME::Base64;
 use URI::Escape;
 use XML::Simple;
@@ -67,7 +67,7 @@ sub _dispatch {
     my $self         = shift;
     my $params       = shift || {};
     my $force_array  = shift || [];
-    my $ua           = LWP::UserAgent->new();
+    my $ua           = Furl->new();
     my $url          = $self->{Endpoint};
     my $response;
     my $post_body;
@@ -101,17 +101,25 @@ sub _dispatch {
 	foreach $try (1..3) {	
 	    if ($post_request) {
 	        $response = $ua->post(
-	            $url, 
-	            'Content-Type' => 'application/x-www-form-urlencoded;charset=utf-8',
-	            'Content'      => $query,
-	            @auth_headers,
+	            $url,
+                [
+	                'Content-Type' => 'application/x-www-form-urlencoded;charset=utf-8',
+	                @auth_headers,
+                ],
+	            $query,
 	        );
 	    }
 	    else {
-	        $response = $ua->get("$url/?$query", "Content-Type" => "text/plain;charset=utf-8", @auth_headers);
+	        $response = $ua->get(
+                "$url/?$query",
+                [
+                    "Content-Type" => "text/plain;charset=utf-8",
+                    @auth_headers,
+                ],
+            );
 	    }
         
-		# $response isa HTTP::Response
+		# $response isa Furl::Response
 		
 	    if ($response->is_success) {
 	        $self->_debug_log($response->content);
