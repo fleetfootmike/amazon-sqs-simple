@@ -67,15 +67,13 @@ sub _dispatch {
     my $self         = shift;
     my $params       = shift || {};
     my $force_array  = shift || [];
-    my $ua           = Furl->new();
+    my $ua           = Furl->new(
+        timeout => $self->{Timeout} || 180, # See Amazon::SQS::Simple POD for default value
+    );
     my $url          = $self->{Endpoint};
     my $response;
     my $post_body;
     my $post_request = 0;
-
-    if ($self->{Timeout}) {
-        $ua->timeout($self->{Timeout});
-    }
 
     $ua->env_proxy;
 
