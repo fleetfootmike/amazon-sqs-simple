@@ -21,7 +21,7 @@ use base qw(Exporter);
 
 use constant ({ 
     SQS_VERSION_2012_11_05 => '2012-11-05',
-    BASE_ENDPOINT          => 'http://queue.amazonaws.com',
+    BASE_ENDPOINT          => 'http://sqs.us-east-1.amazonaws.com',
     DEF_MAX_GET_MSG_SIZE   => 4096, # Messages larger than this size will use a POST request.
 });
                                        
@@ -100,7 +100,7 @@ sub _dispatch {
         
         $req->protocol('HTTP/1.1');
         $req->header('Date' => $http_date);
-        $req->header('x-amz-target', 'SQS_' . SQS_VERSION_2012_11_05 . '.' . $params->{Action});
+        $req->header('x-amz-target', 'AmazonSQSv20121105.' . $params->{Action});
         $req->header('content-type' => 'application/x-www-form-urlencoded;charset=utf-8');
 
         if ($self->{UseIAMRole}) {
@@ -121,9 +121,8 @@ sub _dispatch {
         my $signer = AWS::Signature4->new(-access_key => $self->{AWSAccessKeyId},
                                           -secret_key => $self->{SecretKey});
         $signer->sign($req);
-        
-        $self->_debug_log($req->as_string());
 
+        $self->_debug_log($req->as_string());
         
         $response = $self->{UserAgent}->request($req);
         

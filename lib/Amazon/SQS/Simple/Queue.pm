@@ -23,6 +23,13 @@ sub Delete {
     my $href = $self->_dispatch($params);    
 }
 
+sub Purge {
+    my $self = shift;
+    my $params = { Action => 'PurgeQueue' };
+    
+    my $href = $self->_dispatch($params);    
+}
+
 sub SendMessage {
     my ($self, $message, %params) = @_;
     

@@ -109,6 +109,9 @@ Service
     # Delete the queue
     $q->Delete();
 
+    # Purge the queue
+    $q->Purge();
+
 =head1 INTRODUCTION
 
 Amazon::SQS::Simple is an OO API for the Amazon Simple Queue Service.
