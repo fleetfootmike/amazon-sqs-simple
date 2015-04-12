@@ -8,18 +8,18 @@ use Amazon::SQS::Simple::Base; # for constants
 use Amazon::SQS::Simple::Queue;
 use base qw(Exporter Amazon::SQS::Simple::Base);
 
-our $VERSION   = '2.03';
+our $VERSION   = '2.04';
 our @EXPORT_OK = qw( timestamp );
 
 sub GetQueue {
     my ($self, $queue_endpoint) = @_;
 
-	if ($queue_endpoint =~ /^arn:aws:sqs/) {
-		my ($host, $user, $queue);
-		(undef, undef, undef, $host, $user, $queue) = split(/:/, $queue_endpoint);
-		$queue_endpoint = "https://sqs.$host.amazonaws.com/$user/$queue";
-	}
-
+    if ($queue_endpoint =~ /^arn:aws:sqs/) {
+        my ($host, $user, $queue);
+        (undef, undef, undef, $host, $user, $queue) = split(/:/, $queue_endpoint);
+        $queue_endpoint = "https://sqs.$host.amazonaws.com/$user/$queue";
+    }
+    
     return new Amazon::SQS::Simple::Queue(
         %$self,
         Endpoint => $queue_endpoint,
@@ -86,7 +86,7 @@ Service
     my $secret_key = 'bar'; # Your AWS Secret Key
     
     # Create an SQS object
-    my $sqs = new Amazon::SQS::Simple($access_key, $secret_key);
+    my $sqs = new Amazon::SQS::Simple(AWSAccessKeyId => $access_key, SecretKey => $secret_key);
 
     # Create a new queue
     my $q = $sqs->CreateQueue('queue_name');
@@ -108,6 +108,9 @@ Service
 	
     # Delete the queue
     $q->Delete();
+
+    # Purge the queue
+    $q->Purge();
 
 =head1 INTRODUCTION
 

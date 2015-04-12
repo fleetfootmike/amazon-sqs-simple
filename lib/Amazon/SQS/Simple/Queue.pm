@@ -23,6 +23,13 @@ sub Delete {
     my $href = $self->_dispatch($params);    
 }
 
+sub Purge {
+    my $self = shift;
+    my $params = { Action => 'PurgeQueue' };
+    
+    my $href = $self->_dispatch($params);    
+}
+
 sub SendMessage {
     my ($self, $message, %params) = @_;
     
@@ -153,20 +160,15 @@ sub DeleteMessageBatch {
 sub ChangeMessageVisibility {
     my ($self, $receipt_handle, $timeout, %params) = @_;
     
-    if ($self->_api_version eq SQS_VERSION_2008_01_01) {
-        carp "ChangeMessageVisibility not supported in this API version";
+    if (!defined($timeout) || $timeout =~ /\D/ || $timeout < 0 || $timeout > 43200) {
+        croak "timeout must be specified and in range 0..43200";
     }
-    else {
-        if (!defined($timeout) || $timeout =~ /\D/ || $timeout < 0 || $timeout > 43200) {
-            croak "timeout must be specified and in range 0..43200";
-        }
-
-        $params{Action}             = 'ChangeMessageVisibility';
-        $params{ReceiptHandle}      = $receipt_handle;
-        $params{VisibilityTimeout}  = $timeout;
-
-        my $href = $self->_dispatch(\%params);
-    }
+    
+    $params{Action}             = 'ChangeMessageVisibility';
+    $params{ReceiptHandle}      = $receipt_handle;
+    $params{VisibilityTimeout}  = $timeout;
+    
+    my $href = $self->_dispatch(\%params);
 }
 
 our %valid_permission_actions = map { $_ => 1 } qw(* SendMessage ReceiveMessage DeleteMessage ChangeMessageVisibility GetQueueAttributes);
@@ -174,47 +176,37 @@ our %valid_permission_actions = map { $_ => 1 } qw(* SendMessage ReceiveMessage 
 sub AddPermission {
     my ($self, $label, $account_actions, %params) = @_;
     
-    if ($self->_api_version eq SQS_VERSION_2008_01_01) {
-        carp "AddPermission not supported in this API version";
-    }
-    else {
-        $params{Action} = 'AddPermission';
-        $params{Label}  = $label;
-        my $i = 1;
-        foreach my $account_id (keys %$account_actions) {
-            $account_id =~ /^\d{12}$/ or croak "Account IDs passed to AddPermission should be 12 digit AWS account numbers, no hyphens";
-            my $actions = $account_actions->{$account_id};
-            my @actions;
-            if (UNIVERSAL::isa($actions, 'ARRAY')) {
-                @actions = @$actions;
-            } else {
-                @actions = ($actions);
-            }
-            foreach my $action (@actions) {
-                exists $valid_permission_actions{$action} 
-                    or croak "Action passed to AddPermission must be one of " 
-                     . join(', ', sort keys %valid_permission_actions);
-            
-                $params{"AWSAccountId.$i"} = $account_id;
-                $params{"ActionName.$i"}   = $action;
-                $i++;
-            }
+    $params{Action} = 'AddPermission';
+    $params{Label}  = $label;
+    my $i = 1;
+    foreach my $account_id (keys %$account_actions) {
+        $account_id =~ /^\d{12}$/ or croak "Account IDs passed to AddPermission should be 12 digit AWS account numbers, no hyphens";
+        my $actions = $account_actions->{$account_id};
+        my @actions;
+        if (UNIVERSAL::isa($actions, 'ARRAY')) {
+            @actions = @$actions;
+        } else {
+            @actions = ($actions);
         }
-        my $href = $self->_dispatch(\%params);
+        foreach my $action (@actions) {
+            exists $valid_permission_actions{$action} 
+                or croak "Action passed to AddPermission must be one of " 
+                . join(', ', sort keys %valid_permission_actions);
+            
+            $params{"AWSAccountId.$i"} = $account_id;
+            $params{"ActionName.$i"}   = $action;
+            $i++;
+        }
     }
+    my $href = $self->_dispatch(\%params);
 }
 
 sub RemovePermission {
     my ($self, $label, %params) = @_;
-    
-    if ($self->_api_version eq SQS_VERSION_2008_01_01) {
-        carp "RemovePermission not supported in this API version";
-    }
-    else {
-        $params{Action} = 'RemovePermission';
-        $params{Label}  = $label;
-        my $href = $self->_dispatch(\%params);
-    }
+        
+    $params{Action} = 'RemovePermission';
+    $params{Label}  = $label;
+    my $href = $self->_dispatch(\%params);
 }
 
 sub GetAttributes {
