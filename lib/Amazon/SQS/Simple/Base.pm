@@ -5,7 +5,7 @@ use warnings;
 use Carp qw( croak carp );
 use Digest::HMAC_SHA1;
 use Digest::SHA qw(hmac_sha256 sha256);
-use LWP::UserAgent;
+use Furl;
 use MIME::Base64;
 use URI::Escape;
 use XML::Simple;
@@ -67,18 +67,16 @@ sub _dispatch {
     my $self         = shift;
     my $params       = shift || {};
     my $force_array  = shift || [];
-    my $ua           = LWP::UserAgent->new();
+    my $ua           = Furl->new(
+        timeout => $self->{Timeout} || 180, # See Amazon::SQS::Simple POD for default value
+    );
     my $url          = $self->{Endpoint};
     my $response;
     my $post_body;
     my $post_request = 0;
 
-    if ($self->{Timeout}) {
-        $ua->timeout($self->{Timeout});
-    }
-
     $ua->env_proxy;
-    
+
     $params = {
         AWSAccessKeyId      => $self->{AWSAccessKeyId},
         Version             => $self->{Version},
@@ -88,7 +86,7 @@ sub _dispatch {
     if (!$params->{Timestamp} && !$params->{Expires}) {
         $params->{Timestamp} = _timestamp();
     }
-    
+
     if ($params->{MessageBody} && length($params->{MessageBody}) > $self->_max_get_msg_size) {
         $post_request = 1;
     }
@@ -97,45 +95,53 @@ sub _dispatch {
 
     $self->_debug_log($query);
 
-	my $try;
-	foreach $try (1..3) {	
-	    if ($post_request) {
-	        $response = $ua->post(
-	            $url, 
-	            'Content-Type' => 'application/x-www-form-urlencoded;charset=utf-8',
-	            'Content'      => $query,
-	            @auth_headers,
-	        );
-	    }
-	    else {
-	        $response = $ua->get("$url/?$query", "Content-Type" => "text/plain;charset=utf-8", @auth_headers);
-	    }
-        
-		# $response isa HTTP::Response
-		
-	    if ($response->is_success) {
-	        $self->_debug_log($response->content);
-	        my $href = XMLin($response->content, ForceArray => $force_array, KeyAttr => {});
-	        return $href;
-	    }
-	
-		# advice from internal AWS support - most client libraries try 3 times in the face
-		# of 500 errors, so ours should too
-		
-		next if ($response->code == 500);
-     }
+    my $try;
+    foreach $try (1..3) {
+        if ($post_request) {
+            $response = $ua->post(
+                $url,
+                [
+                    'Content-Type' => 'application/x-www-form-urlencoded;charset=utf-8',
+                    @auth_headers,
+                ],
+                $query,
+            );
+        }
+        else {
+        $response = $ua->get(
+                "$url/?$query",
+                [
+                    "Content-Type" => "text/plain;charset=utf-8",
+                    @auth_headers,
+                ],
+            );
+        }
 
-	 # if we fall out of the loop, then we have either a non-500 error or a persistent 500.
-	
-     my $msg;
-     eval {
-         my $href = XMLin($response->content);
-         $msg = $href->{Error}{Message};
-     };
- 
-     my $error = "ERROR [try $try]: On calling $params->{Action}: " . $response->status_line;
-     $error .= " ($msg)" if $msg;
-     croak $error;
+        # $response isa Furl::Response
+
+        if ($response->is_success) {
+            $self->_debug_log($response->content);
+            my $href = XMLin($response->content, ForceArray => $force_array, KeyAttr => {});
+            return $href;
+        }
+
+        # advice from internal AWS support - most client libraries try 3 times in the face
+        # of 500 errors, so ours should too
+
+        next if ($response->code == 500);
+    }
+
+    # if we fall out of the loop, then we have either a non-500 error or a persistent 500.
+
+    my $msg;
+    eval {
+        my $href = XMLin($response->content);
+        $msg = $href->{Error}{Message};
+    };
+
+    my $error = "ERROR [try $try]: On calling $params->{Action}: " . $response->status_line;
+    $error .= " ($msg)" if $msg;
+    croak $error;
 }
 
 sub _get_or_post {
