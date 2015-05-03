@@ -20,7 +20,9 @@ sub GetQueue {
 		$queue_endpoint = "https://sqs.$host.amazonaws.com/$user/$queue";
 	}
 
-    return new Amazon::SQS::Simple::Queue(
+    return Amazon::SQS::Simple::Queue->new(
+        $self->{AWSAccessKeyId},	#AWSAccessKeyId and SecretKey are the first two arguments to Amazon::SQS::Simple::Base->new
+        $self->{SecretKey},
         %$self,
         Endpoint => $queue_endpoint,
     );
@@ -36,6 +38,8 @@ sub CreateQueue {
     
     if ($href->{CreateQueueResult}{QueueUrl}) {
         return Amazon::SQS::Simple::Queue->new(
+            $self->{AWSAccessKeyId},	#AWSAccessKeyId and SecretKey are the first two arguments to Amazon::SQS::Simple::Base->new
+            $self->{SecretKey},
             %$self,
             Endpoint => $href->{CreateQueueResult}{QueueUrl},
         );
@@ -52,7 +56,9 @@ sub ListQueues {
     # default to the current version
     if ($href->{ListQueuesResult}{QueueUrl}) {
         my @result = map {
-            new Amazon::SQS::Simple::Queue(
+            Amazon::SQS::Simple::Queue->new(
+                $self->{AWSAccessKeyId},	#AWSAccessKeyId and SecretKey are the first two arguments to Amazon::SQS::Simple::Base->new
+                $self->{SecretKey},
                 %$self,
                 Endpoint => $_,
             )        
