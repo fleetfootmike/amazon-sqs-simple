@@ -98,7 +98,9 @@ sub _dispatch {
     $self->_debug_log($query);
 
 	my $try;
-	foreach $try (1..3) {	
+	foreach (1..3) {	
+        $try = $_;
+
 	    if ($post_request) {
 	        $response = $ua->post(
 	            $url, 
