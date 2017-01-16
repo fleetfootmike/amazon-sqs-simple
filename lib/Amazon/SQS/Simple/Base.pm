@@ -33,10 +33,11 @@ our $URI_SAFE_CHARACTERS = '^A-Za-z0-9-_.~'; # defined by AWS, same as URI::Esca
 sub new {
     my $class      = shift;
     my @args = @_;
-    if (scalar(@args) == 2 && $args[0] ne 'UseIAMRole') {
-        my ($access_key, $secret_key) = @args;
+    if (scalar(@args) >= 2 && $args[0] ne 'UseIAMRole') {
+        my $access_key = shift @args;
+        my $secret_key = shift @args;
         @args = (AWSAccessKeyId => $access_key,
-                 SecretKey => $secret_key);
+                 SecretKey => $secret_key, @args);
     }
     my $self = {
         Endpoint         => +BASE_ENDPOINT,
@@ -238,7 +239,7 @@ Amazon::SQS::Simple::Base - No user-serviceable parts included
 =head1 AUTHOR
 
 Copyright 2007-2008 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
-Copyright 2013 Mike (no relation) Whitaker E<lt>penfold@cpan.orgE<gt>
+Copyright 2013-2017 Mike (no relation) Whitaker E<lt>penfold@cpan.orgE<gt>
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
