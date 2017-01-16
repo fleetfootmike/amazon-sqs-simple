@@ -10,6 +10,7 @@ WriteMakefile(
     ABSTRACT_FROM       => 'lib/Amazon/SQS/Simple.pm',
     PL_FILES            => {},
     PREREQ_PM => {
+		'AWS::Signature4'   => 0,
         'Test::More'        => 0,
         'Digest::HMAC_SHA1' => 0,
         'Digest::SHA'       => 0,
@@ -17,6 +18,7 @@ WriteMakefile(
         'MIME::Base64'      => 0,
         'URI::Escape'       => 0,
         'XML::Simple'       => 0,
+        'VM::EC2::Security::CredentialCache' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Amazon-SQS-Simple-*' },

@@ -1,12 +1,18 @@
-#!perl -T
+#!perl  -T
 
 use strict;
 use warnings;
-use Test::More tests => 50;
+use Test::More;
 use Test::Warn;
 use Digest::MD5 qw(md5_hex);
+use Amazon::SQS::Simple;
 
-BEGIN { use_ok('Amazon::SQS::Simple'); }
+if (exists $ENV{AWS_ACCESS_KEY} && exists $ENV{AWS_SECRET_KEY}) {
+	plan tests => 49;
+}
+else {
+	plan skip_all => "AWS_ACCESS_KEY and AWS_SECRET_KEY not set for dev tests";
+}
 
 #################################################
 #### Creating an Amazon::SQS::Simple object
