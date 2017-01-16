@@ -10,6 +10,7 @@ WriteMakefile(
     ABSTRACT_FROM       => 'lib/Amazon/SQS/Simple.pm',
     PL_FILES            => {},
     PREREQ_PM => {
+		'AWS::Signature4'   => 0,
         'Test::More'        => 0,
         'Digest::HMAC_SHA1' => 0,
         'Digest::SHA'       => 0,

@@ -8,7 +8,7 @@ use Amazon::SQS::Simple::Base; # for constants
 use Amazon::SQS::Simple::Queue;
 use base qw(Exporter Amazon::SQS::Simple::Base);
 
-our $VERSION   = '2.04';
+our $VERSION   = '2.05';
 our @EXPORT_OK = qw( timestamp );
 
 sub GetQueue {
@@ -258,11 +258,12 @@ in release 0.9.
 James Neal provided the proxy support code in release 2.0
 Roland Walker provided support for the newer signature version in release 2.0
 Chris Jones provied the batch message code in release 2.0
+Rusty Conover provided the V4 signature support in release 2.05
 
 =head1 AUTHOR
 
 Copyright 2007-2008 Simon Whitaker E<lt>swhitaker@cpan.orgE<gt>
-Copyright 2013 Mike (no relation) Whitaker E<lt>penfold@cpan.orgE<gt>
+Copyright 2013-2017 Mike (no relation) Whitaker E<lt>penfold@cpan.orgE<gt>
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
