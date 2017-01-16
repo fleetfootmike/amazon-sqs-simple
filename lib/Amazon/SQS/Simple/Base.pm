@@ -139,7 +139,7 @@ sub _dispatch {
         # of 500 errors, so ours should too
         # use exponential backoff.
 		
-        if ($response->code == 500) {
+        if ($response->code == 500 || $response->code == 503) {
             my $sleep_amount= 2 ** $try * 50 * 1000;
             $self->_debug_log("Doing sleep for: $sleep_amount");
             Time::HiRes::usleep($sleep_amount);
