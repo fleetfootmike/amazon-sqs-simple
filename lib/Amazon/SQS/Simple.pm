@@ -8,7 +8,7 @@ use Amazon::SQS::Simple::Base; # for constants
 use Amazon::SQS::Simple::Queue;
 use base qw(Exporter Amazon::SQS::Simple::Base);
 
-our $VERSION   = '2.03';
+our $VERSION   = '2.04';
 our @EXPORT_OK = qw( timestamp );
 
 sub GetQueue {
@@ -92,7 +92,7 @@ Service
     my $secret_key = 'bar'; # Your AWS Secret Key
     
     # Create an SQS object
-    my $sqs = new Amazon::SQS::Simple($access_key, $secret_key);
+    my $sqs = new Amazon::SQS::Simple(AWSAccessKeyId => $access_key, SecretKey => $secret_key);
 
     # Create a new queue
     my $q = $sqs->CreateQueue('queue_name');
@@ -114,6 +114,9 @@ Service
 	
     # Delete the queue
     $q->Delete();
+
+    # Purge the queue
+    $q->Purge();
 
 =head1 INTRODUCTION
 
