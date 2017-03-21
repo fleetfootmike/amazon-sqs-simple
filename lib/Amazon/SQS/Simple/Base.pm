@@ -23,6 +23,7 @@ use constant ({
     SQS_VERSION_2012_11_05 => '2012-11-05',
     BASE_ENDPOINT          => 'http://sqs.us-east-1.amazonaws.com',
     DEF_MAX_GET_MSG_SIZE   => 4096, # Messages larger than this size will use a POST request.
+    MAX_RETRIES            => 4,
 });
                                        
 
@@ -91,7 +92,7 @@ sub _dispatch {
         $params->{Timestamp} = _timestamp();
     }
 
-    foreach my $try (1..4) {	
+    foreach my $try (1..MAX_RETRIES) {	
         
         my $req = HTTP::Request->new(POST => $url);
         $req->header(host => URI->new($url)->host);
@@ -127,23 +128,22 @@ sub _dispatch {
         
         $response = $self->{UserAgent}->request($req);
         
-        if ($response->is_success) {
+        if ($response->is_success) { # note, 500 and 503 are NOT success :D
             $self->_debug_log($response->content);
             my $href = XMLin($response->content, ForceArray => $force_array, KeyAttr => {});
             return $href;
         } else {
-            die("Got an error: " . $response->as_string());
-        }
-	
-        # advice from internal AWS support - most client libraries try 3 times in the face
-        # of 500 errors, so ours should too
-        # use exponential backoff.
+            # advice from internal AWS support - most client libraries try 3 times in the face
+            # of 500 errors, so ours should too
+            # use exponential backoff.
 		
-        if ($response->code == 500 || $response->code == 503) {
-            my $sleep_amount= 2 ** $try * 50 * 1000;
-            $self->_debug_log("Doing sleep for: $sleep_amount");
-            Time::HiRes::usleep($sleep_amount);
-            next;
+            if ($response->code == 500 || $response->code == 503) {
+                my $sleep_amount= 2 ** $try * 50 * 1000;
+                $self->_debug_log("Doing sleep for: $sleep_amount");
+                Time::HiRes::usleep($sleep_amount);
+                next;
+            }
+            die("Got an error: " . $response->as_string());
         }
     }
 

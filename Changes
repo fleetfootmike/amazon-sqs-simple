@@ -78,3 +78,6 @@ Revision history for Amazon-SQS-Simple
         Add v4 signature support (rustyconover)
         Better tracking of retries (cjhamil)
         Retry 503s as well (Chris Jones)
+        
+2.06    20 May 2017
+        Fix 500/503 retry code so it actually works
