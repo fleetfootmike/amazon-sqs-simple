@@ -79,5 +79,8 @@ Revision history for Amazon-SQS-Simple
         Better tracking of retries (cjhamil)
         Retry 503s as well (Chris Jones)
         
-2.06    20 May 2017
+2.06    20 Mar 2017
         Fix 500/503 retry code so it actually works
+
+2.07    30 Mar 2017
+        Added missing module import (Sachin Sebastian)
