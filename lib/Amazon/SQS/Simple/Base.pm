@@ -170,7 +170,7 @@ sub _debug_log {
 sub _escape_params {
     my ($self, $params) = @_;
 	
-    my $escaped_params = {};
+    my $escaped_params = {%$params};
 
     # Need to escape + characters in signature
     # see http://docs.amazonwebservices.com/AWSSimpleQueueService/2006-04-01/Query_QueryAuth.html
