@@ -15,6 +15,7 @@ use AWS::Signature4;
 use POSIX qw(strftime);
 use Encode qw(encode);
 use Data::Dumper;
+use Time::HiRes;
 use VM::EC2::Security::CredentialCache;
 
 use base qw(Exporter);
