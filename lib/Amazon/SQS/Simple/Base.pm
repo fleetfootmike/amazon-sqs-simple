@@ -3,7 +3,6 @@ package Amazon::SQS::Simple::Base;
 use strict;
 use warnings;
 use Carp qw( croak carp );
-use Digest::HMAC_SHA1;
 use Digest::SHA qw(hmac_sha256 sha256);
 use LWP::UserAgent;
 use MIME::Base64;

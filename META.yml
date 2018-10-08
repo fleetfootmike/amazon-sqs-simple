@@ -18,7 +18,6 @@ no_index:
     - t
     - inc
 requires:
-  Digest::HMAC_SHA1: 0
   Digest::SHA: 0
   LWP::UserAgent: 0
   MIME::Base64: 0

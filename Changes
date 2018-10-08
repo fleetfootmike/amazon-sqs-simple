@@ -82,5 +82,7 @@ Revision history for Amazon-SQS-Simple
 2.06    20 Mar 2017
         Fix 500/503 retry code so it actually works
 
-2.07    30 Mar 2017
+2.07    18 Sep 2018
         Added missing module import (Sachin Sebastian)
+        Fixed double encode on retry (Clint Seales)
+	Change to Digest::SHA1
